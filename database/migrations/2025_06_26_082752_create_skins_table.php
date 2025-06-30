@@ -12,18 +12,18 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('skins', function (Blueprint $table) {
-            $table->id();
+            $table->string('id')->primary();
 
             $table->string('name');
-            $table->string('skin_code')->unique()->nullable(); // unique code from JSON
+            $table->string('skin_code')->unique()->nullable();
             $table->text('description')->nullable();
 
-            // Foreign key fields
-            $table->string('weapon_id');    // string (e.g., leather_handwraps)
-            $table->string('category_id');  // string (e.g., sfui_invpanel_filter_gloves)
-            $table->string('pattern_id');   // string (e.g., handwrap_camo_grey)
-            $table->string('rarity_id');    // string (e.g., rarity_ancient)
-            $table->string('team_id');      // string (e.g., both, terrorists)
+            // Make foreign key fields nullable
+            $table->string('weapon_id')->nullable();   
+            $table->string('category_id')->nullable(); 
+            $table->string('pattern_id')->nullable();  
+            $table->string('rarity_id')->nullable();   
+            $table->string('team_id')->nullable();     
 
             $table->float('min_float')->nullable();
             $table->float('max_float')->nullable();
@@ -37,12 +37,12 @@ return new class extends Migration
 
             $table->timestamps();
 
-            // Foreign key constraints
-            $table->foreign('weapon_id')->references('id')->on('weapons')->onDelete('cascade');
-            $table->foreign('category_id')->references('id')->on('categories')->onDelete('cascade');
-            $table->foreign('pattern_id')->references('id')->on('patterns')->onDelete('cascade');
-            $table->foreign('rarity_id')->references('id')->on('rarities')->onDelete('cascade');
-            $table->foreign('team_id')->references('id')->on('teams')->onDelete('cascade');
+            // Foreign key constraints - only apply if columns are not null
+            $table->foreign('weapon_id')->references('id')->on('weapons')->onDelete('set null');
+            $table->foreign('category_id')->references('id')->on('categories')->onDelete('set null');
+            $table->foreign('pattern_id')->references('id')->on('patterns')->onDelete('set null');
+            $table->foreign('rarity_id')->references('id')->on('rarities')->onDelete('set null');
+            $table->foreign('team_id')->references('id')->on('teams')->onDelete('set null');
         });
     }
 

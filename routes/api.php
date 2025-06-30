@@ -42,6 +42,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/{id}', [CrateController::class, 'update']);
         Route::delete('/{id}', [CrateController::class, 'destroy']);
         });
+        Route::post('/crates/{crate}/assign', [CrateController::class, 'assignItems']);
+        Route::post('/crates/{crate}/unassign', [CrateController::class, 'unassignItems']);
         //Keys routes
         Route::prefix('keys')->group(function () {
             Route::get('/', [KeyController::class, 'index']);

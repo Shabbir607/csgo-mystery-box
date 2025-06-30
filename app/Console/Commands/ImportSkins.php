@@ -5,7 +5,7 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use App\Models\{Skin, Weapon, Category, Pattern, Rarity, Team};
-
+use Illuminate\Support\Str;
 class ImportSkins extends Command
 {
     protected $signature = 'import:skins';
@@ -71,27 +71,38 @@ class ImportSkins extends Command
                     ['name' => $skinData['team']['name']]
                 );
 
-                // Check and insert Skin
-                if (!Skin::where('skin_code', $skinData['id'])->exists()) {
-                    Skin::create([
-                        'name' => $skinData['name'] ?? '',
-                        'skin_code' => $skinData['id'] ?? null,
-                        'description' => $skinData['description'] ?? '',
-                        'weapon_id' => $weapon->id,
-                        'category_id' => $category->id,
-                        'pattern_id' => $pattern->id,
-                        'min_float' => $skinData['min_float'] ?? null,
-                        'max_float' => $skinData['max_float'] ?? null,
-                        'rarity_id' => $rarity->id,
-                        'stattrak' => filter_var($skinData['stattrak'] ?? false, FILTER_VALIDATE_BOOLEAN),
-                        'souvenir' => filter_var($skinData['souvenir'] ?? false, FILTER_VALIDATE_BOOLEAN),
-                        'paint_index' => $skinData['paint_index'] ?? null,
-                        'team_id' => $team->id,
-                        'legacy_model' => filter_var($skinData['legacy_model'] ?? false, FILTER_VALIDATE_BOOLEAN),
-                        'image' => $skinData['image'] ?? null,
-                    ]);
-                    $imported++;
+                
+
+            if (!Skin::where('skin_code', $skinData['id'])->exists()) {
+                $id = $skinData['id'] ?? null;
+
+                // If ID is missing or invalid, generate one manually
+                if (!$id || !is_string($id)) {
+                    $id = 'skin-' . Str::uuid(); // or you can use uniqid('skin-') for shorter id
                 }
+
+                Skin::create([
+                    'id' => $id, // Explicitly pass the ID
+                    'name' => $skinData['name'] ?? '',
+                    'skin_code' => $skinData['id'] ?? null,
+                    'description' => $skinData['description'] ?? '',
+                    'weapon_id' => $weapon->id ?? null,
+                    'category_id' => $category->id ?? null,
+                    'pattern_id' => $pattern->id ?? null,
+                    'min_float' => $skinData['min_float'] ?? null,
+                    'max_float' => $skinData['max_float'] ?? null,
+                    'rarity_id' => $rarity->id ?? null,
+                    'stattrak' => filter_var($skinData['stattrak'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                    'souvenir' => filter_var($skinData['souvenir'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                    'paint_index' => $skinData['paint_index'] ?? null,
+                    'team_id' => $team->id ?? null,
+                    'legacy_model' => filter_var($skinData['legacy_model'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                    'image' => $skinData['image'] ?? null,
+                ]);
+
+                $imported++;
+            }
+
             } catch (\Exception $e) {
                 $this->warn("⚠️ Skipping skin [{$skinData['id']}] due to error: " . $e->getMessage());
             }

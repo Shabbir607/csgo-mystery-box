@@ -14,6 +14,7 @@
         "laravel/sanctum": "^4.1",
         "laravel/socialite": "^5.21",
         "laravel/tinker": "^2.10.1",
+        "magadanuhak/laravel-provably-fair": "^1.0",
         "socialiteproviders/steam": "^4.3"
     },
     "require-dev": {

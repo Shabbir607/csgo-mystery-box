@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "fbe86abd13d67cebb1a0e8caf77fcd8b",
+    "content-hash": "cb8acdf3df8ddff8ecb8c5e9cbc139db",
     "packages": [
         {
             "name": "brick/math",
@@ -2649,6 +2649,56 @@
                 }
             ],
             "time": "2024-12-08T08:18:47+00:00"
+        },
+        {
+            "name": "magadanuhak/laravel-provably-fair",
+            "version": "1.0.5",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/magadanuhak/laravel-provably-fair.git",
+                "reference": "19497b2515deefc23aaa62b71176ee0a837a45df"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/magadanuhak/laravel-provably-fair/zipball/19497b2515deefc23aaa62b71176ee0a837a45df",
+                "reference": "19497b2515deefc23aaa62b71176ee0a837a45df",
+                "shasum": ""
+            },
+            "require": {
+                "laravel/framework": ">=8",
+                "php": ">=8.0"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^10"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Magadanuhak\\ProvablyFair\\ProvablyFairServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Magadanuhak\\ProvablyFair\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Daniel Maga"
+                }
+            ],
+            "description": "A Laravel package to get Provably Fair random numbers that user can verify",
+            "support": {
+                "issues": "https://github.com/magadanuhak/laravel-provably-fair/issues",
+                "source": "https://github.com/magadanuhak/laravel-provably-fair/tree/1.0.5"
+            },
+            "time": "2024-05-28T11:04:31+00:00"
         },
         {
             "name": "monolog/monolog",

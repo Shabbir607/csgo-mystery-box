@@ -11,14 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-    Schema::create('collection_skin', function (Blueprint $table) {
+       Schema::create('collection_crate', function (Blueprint $table) {
         $table->string('collection_id');
-        $table->string('skin_id');
-        $table->string('rarity_id');
-        $table->primary(['collection_id', 'skin_id']);
+        $table->string('crate_id');
+        $table->primary(['collection_id', 'crate_id']);
         $table->foreign('collection_id')->references('id')->on('collections')->onDelete('cascade');
-        $table->foreign('skin_id')->references('id')->on('skins')->onDelete('cascade');
-        $table->foreign('rarity_id')->references('id')->on('rarities')->onDelete('cascade');
+        $table->foreign('crate_id')->references('id')->on('crates')->onDelete('cascade');
     });
     }
 
@@ -27,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('collection_skin');
+        Schema::dropIfExists('collection_crate_pivot');
     }
 };

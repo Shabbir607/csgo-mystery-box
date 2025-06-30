@@ -13,16 +13,22 @@ class CrateController extends Controller
     // List all crates with optional search and pagination
     public function index(Request $request)
     {
-        $query = Crate::query();
+        $query = Crate::with(['skins', 'items']);
 
         if ($search = $request->query('search')) {
-            $query->where('name', 'like', "%{$search}%");
+            $query->where('name', 'like', '%' . $search . '%');
         }
 
-        $crates = $query->paginate(10);
+        $perPage = $request->query('per_page', 10); 
+        $crates = $query->orderBy('created_at', 'desc')->paginate($perPage);
 
-        return response()->json($crates);
+        return response()->json([
+            'status' => true,
+            'message' => 'Crates fetched successfully',
+            'data' => $crates
+        ]);
     }
+
 
     // Show a single crate
     public function show($id)
@@ -129,4 +135,51 @@ class CrateController extends Controller
 
         return response()->json(['message' => 'Crate deleted successfully']);
     }
+    public function assignItems(Request $request, Crate $crate)
+{
+    $validated = $request->validate([
+        'skin_ids' => 'nullable|array',
+        'skin_ids.*' => 'exists:skins,id',
+        'weapon_ids' => 'nullable|array',
+        'weapon_ids.*' => 'exists:base_weapons,id',
+    ]);
+
+    if (!empty($validated['skin_ids'])) {
+        $crate->skins()->syncWithoutDetaching($validated['skin_ids']);
+    }
+
+    if (!empty($validated['weapon_ids'])) {
+        $crate->items()->syncWithoutDetaching($validated['weapon_ids']);
+    }
+
+    return response()->json([
+        'status' => true,
+        'message' => 'Items assigned to crate successfully',
+        'crate' => $crate->load(['skins', 'items'])
+    ]);
+}
+
+public function unassignItems(Request $request, Crate $crate)
+{
+    $validated = $request->validate([
+        'skin_ids' => 'nullable|array',
+        'skin_ids.*' => 'exists:skins,id',
+        'weapon_ids' => 'nullable|array',
+        'weapon_ids.*' => 'exists:base_weapons,id',
+    ]);
+
+    if (!empty($validated['skin_ids'])) {
+        $crate->skins()->detach($validated['skin_ids']);
+    }
+
+    if (!empty($validated['weapon_ids'])) {
+        $crate->items()->detach($validated['weapon_ids']);
+    }
+
+    return response()->json([
+        'status' => true,
+        'message' => 'Items unassigned from crate successfully',
+        'crate' => $crate->load(['skins', 'items'])
+    ]);
+}
 }

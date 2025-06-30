@@ -3,16 +3,24 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+
 
 class Collection extends Model
 {
-        use HasFactory;
+    protected $guarded = [];
+    
     public $incrementing = false;
     protected $keyType = 'string';
-    protected $fillable = ['id', 'name', 'image'];
-
-    public function skins() {
-        return $this->belongsToMany(Skin::class);
+    
+    public function crates(): BelongsToMany
+    {
+        return $this->belongsToMany(Crate::class);
+    }
+    
+    public function skins(): BelongsToMany
+    {
+        return $this->belongsToMany(Skin::class)
+            ->withPivot('rarity_id');
     }
 }
