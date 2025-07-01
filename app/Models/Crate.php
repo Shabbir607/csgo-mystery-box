@@ -23,4 +23,13 @@ class Crate extends Model
     {
         return $this->belongsToMany(BaseWeapon::class, 'crate_weapon', 'crate_id', 'base_weapon_id');
     }
+    public function weapons()
+{
+    return $this->belongsToMany(BaseWeapon::class, 'crate_weapon', 'crate_id', 'base_weapon_id');
+}
+public function baseWeapons()
+{
+    return $this->belongsToMany(BaseWeapon::class, 'crate_weapon', 'crate_id', 'base_weapon_id');
+}
+
 }

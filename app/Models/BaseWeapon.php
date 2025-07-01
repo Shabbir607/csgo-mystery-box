@@ -18,8 +18,9 @@ class BaseWeapon extends Model
         'price',
         'probability',
     ];
-        public function crates()
-    {
-        return $this->belongsToMany(Crate::class, 'crate_weapon', 'base_weapon_id', 'crate_id');
-    }
+public function crates()
+{
+    return $this->belongsToMany(Crate::class, 'crate_weapon', 'base_weapon_id', 'crate_id');
+}
+
 }

@@ -5,44 +5,48 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Crate;
 use Illuminate\Http\Request;
-use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Validator;
 
 class CrateController extends Controller
 {
-    // List all crates with optional search and pagination
+    /**
+     * List all crates with optional search and pagination.
+     */
     public function index(Request $request)
     {
-        $query = Crate::with(['skins', 'items']);
+        $query = Crate::with(['skins', 'keys', 'items', 'weapons']);
 
         if ($search = $request->query('search')) {
-            $query->where('name', 'like', '%' . $search . '%');
+            $query->where('name', 'like', "%{$search}%");
         }
 
-        $perPage = $request->query('per_page', 10); 
-        $crates = $query->orderBy('created_at', 'desc')->paginate($perPage);
+        $crates = $query->paginate(10);
 
         return response()->json([
-            'status' => true,
-            'message' => 'Crates fetched successfully',
-            'data' => $crates
+            'crates' => $crates
         ]);
     }
 
-
-    // Show a single crate
+    /**
+     * Show a single crate with its relationships.
+     */
     public function show($id)
     {
-        $crate = Crate::findOrFail($id);
-        return response()->json($crate);
+        $crate = Crate::with(['skins', 'keys', 'items'])->findOrFail($id);
+
+        return response()->json([
+            'crate' => $crate
+        ]);
     }
 
-    // Create a new crate
+    /**
+     * Create a new crate.
+     */
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'price' => 'required|float|min:0',
+            'price' => ['required', 'numeric', 'regex:/^\d+(\.\d{1,2})?$/'],
             'image' => 'nullable|string',
             'description' => 'nullable|string',
             'type' => 'nullable|string|max:255',
@@ -53,12 +57,6 @@ class CrateController extends Controller
             'loot_name' => 'nullable|string|max:255',
             'loot_footer' => 'nullable|string',
             'loot_image' => 'nullable|string',
-        ], [
-            'name.required' => 'The crate name is required.',
-            'name.string' => 'The crate name must be a string.',
-            'name.max' => 'The crate name may not be greater than 255 characters.',
-            'first_sale_date.date' => 'The first sale date must be a valid date.',
-            'rental.boolean' => 'The rental field must be true or false.',
         ]);
 
         if ($validator->fails()) {
@@ -70,7 +68,7 @@ class CrateController extends Controller
 
         $validated = $validator->validated();
 
-        // Generate unique crate ID
+        // Generate a unique string ID
         do {
             $id = 'crate-' . rand(1000, 9999);
         } while (Crate::where('id', $id)->exists());
@@ -81,18 +79,20 @@ class CrateController extends Controller
 
         return response()->json([
             'message' => 'Crate created successfully.',
-            'crate' => $crate
+            'crate' => $crate->load(['skins', 'keys', 'items'])
         ], 201);
     }
 
-    // Update an existing crate
+    /**
+     * Update an existing crate.
+     */
     public function update(Request $request, $id)
     {
         $crate = Crate::findOrFail($id);
 
         $validator = Validator::make($request->all(), [
             'name' => 'sometimes|required|string|max:255',
-            'price' => 'sometimes|required|float|min:0',
+            'price' => ['sometimes', 'required', 'numeric', 'regex:/^\d+(\.\d{1,2})?$/'],
             'image' => 'nullable|string',
             'description' => 'nullable|string',
             'type' => 'nullable|string|max:255',
@@ -103,12 +103,6 @@ class CrateController extends Controller
             'loot_name' => 'nullable|string|max:255',
             'loot_footer' => 'nullable|string',
             'loot_image' => 'nullable|string',
-        ], [
-            'name.required' => 'The crate name is required when provided.',
-            'name.string' => 'The crate name must be a string.',
-            'name.max' => 'The crate name may not be greater than 255 characters.',
-            'first_sale_date.date' => 'The first sale date must be a valid date.',
-            'rental.boolean' => 'The rental field must be true or false.',
         ]);
 
         if ($validator->fails()) {
@@ -123,63 +117,24 @@ class CrateController extends Controller
 
         return response()->json([
             'message' => 'Crate updated successfully.',
-            'crate' => $crate
+            'crate' => $crate->fresh()->load(['skins', 'keys', 'items'])
         ]);
     }
 
-    // Delete a crate
+    /**
+     * Delete a crate.
+     */
     public function destroy($id)
     {
-        $crate = Crate::findOrFail($id);
+        $crate = Crate::with('weapons')->findOrFail($id);
+
+        $crate->weapons()->detach();
+
         $crate->delete();
 
-        return response()->json(['message' => 'Crate deleted successfully']);
-    }
-    public function assignItems(Request $request, Crate $crate)
-{
-    $validated = $request->validate([
-        'skin_ids' => 'nullable|array',
-        'skin_ids.*' => 'exists:skins,id',
-        'weapon_ids' => 'nullable|array',
-        'weapon_ids.*' => 'exists:base_weapons,id',
-    ]);
-
-    if (!empty($validated['skin_ids'])) {
-        $crate->skins()->syncWithoutDetaching($validated['skin_ids']);
+        return response()->json([
+            'message' => 'Crate deleted successfully and all weapons unassigned.'
+        ]);
     }
 
-    if (!empty($validated['weapon_ids'])) {
-        $crate->items()->syncWithoutDetaching($validated['weapon_ids']);
-    }
-
-    return response()->json([
-        'status' => true,
-        'message' => 'Items assigned to crate successfully',
-        'crate' => $crate->load(['skins', 'items'])
-    ]);
-}
-
-public function unassignItems(Request $request, Crate $crate)
-{
-    $validated = $request->validate([
-        'skin_ids' => 'nullable|array',
-        'skin_ids.*' => 'exists:skins,id',
-        'weapon_ids' => 'nullable|array',
-        'weapon_ids.*' => 'exists:base_weapons,id',
-    ]);
-
-    if (!empty($validated['skin_ids'])) {
-        $crate->skins()->detach($validated['skin_ids']);
-    }
-
-    if (!empty($validated['weapon_ids'])) {
-        $crate->items()->detach($validated['weapon_ids']);
-    }
-
-    return response()->json([
-        'status' => true,
-        'message' => 'Items unassigned from crate successfully',
-        'crate' => $crate->load(['skins', 'items'])
-    ]);
-}
 }

@@ -4,65 +4,49 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\User;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules;
 
 class AdminController extends Controller
 {
     /**
-     * Get all users
+     * Update authenticated admin's profile
      */
-    public function index()
+    public function update(Request $request)
     {
-        return response()->json([
-            'users' => User::with('role')->paginate(10)
-        ]);
-    }
+        $user = Auth::guard('sanctum')->user();
 
-    /**
-     * Get specific user
-     */
-    public function show(User $user)
-    {
-        return response()->json([
-            'user' => $user->load('role')
-        ]);
-    }
+        if (!$user || !$user->isAdmin()) {
+            return response()->json([
+                'message' => 'Unauthorized',
+            ], 403);
+        }
 
-    /**
-     * Update user
-     */
-    public function update(Request $request, User $user)
-    {
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
-            'email' => 'sometimes|string|email|max:255|unique:users,email,'.$user->id,
-            'role_id' => 'sometimes|exists:roles,id'
+            'email' => 'sometimes|string|email|max:255|unique:users,email,' . $user->id,
+            'password' => ['sometimes', 'confirmed', Rules\Password::defaults()],
+            'avatar' => 'sometimes|image|mimes:jpg,jpeg,png|max:2048',
         ]);
+
+        if ($request->filled('password')) {
+            $validated['password'] = Hash::make($request->password);
+        } else {
+            unset($validated['password']);
+        }
+
+        // Handle avatar upload
+        if ($request->hasFile('avatar')) {
+            $path = $request->file('avatar')->store('avatars', 'public');
+            $validated['avatar'] = $path;
+        }
 
         $user->update($validated);
 
         return response()->json([
-            'message' => 'User updated successfully',
-            'user' => $user->fresh()->load('role')
-        ]);
-    }
-
-    /**
-     * Delete user
-     */
-    public function destroy(User $user)
-    {
-        // Prevent deleting yourself
-        if ($user->id === auth()->id()) {
-            return response()->json([
-                'message' => 'You cannot delete your own account'
-            ], 403);
-        }
-
-        $user->delete();
-
-        return response()->json([
-            'message' => 'User deleted successfully'
+            'message' => 'Profile updated successfully',
+            'user' => $user->fresh()->load('role'),
         ]);
     }
 }

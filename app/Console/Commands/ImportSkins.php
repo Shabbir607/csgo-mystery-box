@@ -82,7 +82,7 @@ class ImportSkins extends Command
                 }
 
                 Skin::create([
-                    'id' => $id, // Explicitly pass the ID
+                    'id' => $id, 
                     'name' => $skinData['name'] ?? '',
                     'skin_code' => $skinData['id'] ?? null,
                     'description' => $skinData['description'] ?? '',

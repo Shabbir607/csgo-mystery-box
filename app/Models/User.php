@@ -2,21 +2,22 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasApiTokens;
+    use HasApiTokens, HasFactory, Notifiable;
 
     /**
-     * The attributes that are mass assignable.
+     * Attributes that are mass assignable.
      *
-     * @var list<string>
+     * @var array<int, string>
      */
     protected $fillable = [
         'name',
@@ -25,12 +26,20 @@ class User extends Authenticatable
         'steamid',
         'avatar',
         'profile_url',
+        'role_id',
+        'status',
+        'is_verified',
+        'join_date',
+        'last_login',
+        'ip_address',
+        'country',
+        'two_factor_enabled',
     ];
 
     /**
-     * The attributes that should be hidden for serialization.
+     * Attributes that should be hidden.
      *
-     * @var list<string>
+     * @var array<int, string>
      */
     protected $hidden = [
         'password',
@@ -38,7 +47,7 @@ class User extends Authenticatable
     ];
 
     /**
-     * Get the attributes that should be cast.
+     * Casts for model fields.
      *
      * @return array<string, string>
      */
@@ -47,24 +56,58 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_verified' => 'boolean',
+            'two_factor_enabled' => 'boolean',
+            'join_date' => 'date',
+            'last_login' => 'datetime',
         ];
     }
-    public function role()
+
+    /**
+     * Get the role relationship.
+     */
+    public function role(): BelongsTo
     {
         return $this->belongsTo(Role::class);
     }
 
-    public function isAdmin()
+    /**
+     * Check if the user is an admin.
+     */
+    public function isAdmin(): bool
     {
-        return $this->role_id === Role::ADMIN;
+        return $this->role && $this->role->name === 'admin';
     }
-    public function steamAccount()
-{
-    return $this->hasOne(SteamAccount::class);
-}
 
-public function details()
-{
-    return $this->hasOne(UserDetails::class);
-}
+    /**
+     * Get the user's extended profile details.
+     */
+    public function details(): HasOne
+    {
+        return $this->hasOne(UserDetails::class);
+    }
+
+    /**
+     * Get the user's Steam account (if separate).
+     */
+    public function steamAccount(): HasOne
+    {
+        return $this->hasOne(SteamAccount::class);
+    }
+
+    /**
+     * Get the full avatar URL (from details).
+     */
+    public function avatarUrl(): ?string
+    {
+        return $this->details?->avatar_full ?? $this->avatar;
+    }
+
+    /**
+     * Accessor for full name (if needed from details).
+     */
+    public function fullName(): ?string
+    {
+        return $this->details?->real_name ?? $this->name;
+    }
 }
