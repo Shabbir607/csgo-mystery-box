@@ -33,15 +33,16 @@ function App() {
   const [currentView, setCurrentView] = useState<View>('cases');
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-
+  console.log("User", user)
+  
   // Memoized loading component
   const LoadingScreen = useMemo(() => (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 flex items-center justify-center">
       <div className="liquid-glass rounded-3xl p-12 text-center animate-liquid-morph">
         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center mx-auto mb-6 animate-glow-pulse overflow-hidden p-3">
-          <img 
-            src="/download.webp" 
-            alt="CleanCase Logo" 
+          <img
+            src="/download.webp"
+            alt="CleanCase Logo"
             className="w-full h-full object-contain filter brightness-0 invert"
             loading="eager"
           />
@@ -50,7 +51,7 @@ function App() {
           CleanCase
         </h1>
         <p className="text-gray-300">Loading your premium experience...</p>
-        
+
         {/* Floating Orbs */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           {[...Array(8)].map((_, i) => (
@@ -78,7 +79,7 @@ function App() {
       const inventory = JSON.parse(localStorage.getItem(`${STORAGE_KEYS.USER_INVENTORY}_${username}`) || '[]');
       const balance = parseFloat(localStorage.getItem(`${STORAGE_KEYS.USER_BALANCE}_${username}`) || '0');
       const stats = JSON.parse(localStorage.getItem(`${STORAGE_KEYS.USER_STATS}_${username}`) || '{}');
-      
+
       return {
         inventory,
         balance: balance || (username.toLowerCase() === 'admin' ? 1000 : 100), // Default balance
@@ -128,16 +129,16 @@ function App() {
         const storedUser = localStorage.getItem(STORAGE_KEYS.USER);
         if (storedUser) {
           const userData = JSON.parse(storedUser);
-          
+
           // Load persistent data for this user
           const persistentData = getPersistentUserData(userData.username);
-          
+
           const fullUserData: User = {
             ...userData,
             ...persistentData,
             joinDate: persistentData.joinDate
           };
-          
+
           setUser(fullUserData);
         }
 
@@ -145,7 +146,7 @@ function App() {
         const storedCases = localStorage.getItem(STORAGE_KEYS.CASES);
         if (storedCases) {
           const parsedCases = JSON.parse(storedCases);
-          const customCases = parsedCases.filter((c: CSGOCase) => 
+          const customCases = parsedCases.filter((c: CSGOCase) =>
             !initialCases.some(initial => initial.id === c.id)
           );
           setCases([...initialCases, ...customCases]);
@@ -193,7 +194,7 @@ function App() {
         steamAccount: user.steamAccount
       };
       saveToStorage(STORAGE_KEYS.USER, basicUserData);
-      
+
       // Save persistent data separately
       savePersistentUserData(user.username, {
         inventory: user.inventory,
@@ -227,47 +228,61 @@ function App() {
   }, [currentView, saveToStorage]);
 
   // Optimized authentication functions
-const handleLogin = useCallback(async (email: string, password: string) => {
-  try {
-    await new Promise(resolve => setTimeout(resolve, 1000));
+  const handleLogin = useCallback(async (email: string, password: string) => {
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-    const response = await axios.post(
-      'http://127.0.0.1:8000/api/login',
-      {
-        email,
-        password,
-      },
-      {
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-        },
+      let response;
+
+      try {
+        response = await axios.post(
+          'https://production.gameonha.com/api/login',
+          { email, password },
+          {
+            headers: {
+              Accept: 'application/json',
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+      } catch (error) {
+        console.warn('Normal login failed. Trying Admin login...');
+
+        response = await axios.post(
+          'https://production.gameonha.com/api/admin/login',
+          { email, password },
+          {
+            headers: {
+              Accept: 'application/json',
+              'Content-Type': 'application/json',
+            },
+          }
+        );
       }
-    );
 
-    if (response.status === 200 && response.data) {
+      const token = response.data?.token;
+      if (!token) {
+        console.error("No Token Found in login Response", response.data);
+        alert("Login failed: Token not Received.");
+        return;
+      }
+
       const persistentData = getPersistentUserData(email);
-
       const mockUser: User = {
-        username: response.data.user.name,
-        isAdmin: response.data.isAdmin,
+        username: response.data.user?.name || 'Unknown',
+        isAdmin: response.data.isAdmin === true,
         ...persistentData
       };
-    const token = response.data.token;
-    sessionStorage.setItem('auth_token', token);
-  
+
+      sessionStorage.setItem('auth_token', token);
       setUser(mockUser);
       setShowLoginModal(false);
-    } else {
-      console.error('Login failed:', response);
-      alert('Invalid credentials');
-    }
-  } catch (error) {
-    console.error('Login API error:', error);
-    alert('Login failed. Please check your credentials and try again.');
-  }
-}, [getPersistentUserData]);
 
+    } catch (error) {
+      console.error('Login failed completely:', error);
+      alert('Login failed. Please Check your Credentials and Try Again.');
+    }
+  }, [getPersistentUserData]);
 
   const handleRegister = useCallback(
     async (
@@ -277,12 +292,10 @@ const handleLogin = useCallback(async (email: string, password: string) => {
       confirmPassword: string
     ) => {
       try {
-  
         await new Promise(resolve => setTimeout(resolve, 1000));
-  
-        // Send registration request to backend
+
         const response = await axios.post(
-          'http://127.0.0.1:8000/api/register',
+          'https://production.gameonha.com/api/register',
           {
             username,
             email,
@@ -296,54 +309,111 @@ const handleLogin = useCallback(async (email: string, password: string) => {
             },
           }
         );
-  
+
+        console.log("Response Received:", response.data);
+
         const responseData = response.data?.user || response.data;
-  
-        // Load any saved persistent data (optional fallback)
-        // const persistentData = getPersistentUserData(username) || {};
-  
-        // const mockUser: User = {
-        //   username: responseData.username || username,
-        //   isAdmin: responseData.isAdmin ?? false,
-        //   balance: responseData.balance ?? persistentData.balance ?? 100,
-        //   inventory: responseData.inventory ?? persistentData.inventory ?? [],
-        //   level: responseData.level ?? persistentData.level ?? 1,
-        //   totalOpened: responseData.totalOpened ?? persistentData.totalOpened ?? 0,
-        //   joinDate: responseData.joinDate
-        //     ? new Date(responseData.joinDate)
-        //     : persistentData.joinDate
-        //       ? new Date(persistentData.joinDate)
-        //       : new Date(),
-        // };
-  
-        // Set state and close modal
-        // setUser(mockUser);
-        
-         setShowLoginModal(true);
+        console.log("Processed Response Data:", responseData);
+        setShowLoginModal(true);
+        console.log("Registration Successful, showing Login Modal.");
       } catch (error: any) {
         const message =
           error?.response?.data?.message ||
           error?.response?.data?.error ||
           error.message ||
-          "Registration failed. Please try again.";
+          "Registration failed. Please Try Again.";
         console.error("Registration error:", message);
         alert(message);
       }
     },
     [getPersistentUserData]
   );
-  
 
-  const handleLogout = useCallback(() => {
-    // Don't clear persistent data on logout - only clear session data
-    setUser(null);
-    setSelectedCase(null);
-    setCurrentView('cases');
-    
+  const handleLogout = useCallback(async () => {
+    const token = sessionStorage.getItem('auth_token');
+    if (!token) {
+      console.warn('No Token Found in SessionStorage. Skipping logout API.');
+    }
+
+    try {
+      if (token) {
+
+        const response = await axios.post(
+          'https://production.gameonha.com/api/logout',
+          {},
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: 'application/json',
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+        console.log("Logout API Response:", response.data);
+      }
+    } catch (error: any) {
+      console.warn('Logout API failed:', error?.response?.data || error.message);
+    }
+
+    // Always clear session data regardless
+    sessionStorage.removeItem('auth_token');
     localStorage.removeItem(STORAGE_KEYS.USER);
     localStorage.removeItem(STORAGE_KEYS.SELECTED_CASE);
     saveToStorage(STORAGE_KEYS.CURRENT_VIEW, 'cases');
+
+    setUser(null);
+    setSelectedCase(null);
+    setCurrentView('cases');
   }, [saveToStorage]);
+
+  const fetchAuthenticatedUser = useCallback(async (): Promise<User | null> => {
+    const token = sessionStorage.getItem('auth_token');
+
+    if (!token) {
+      console.warn("No Token Found in SessionStorage.");
+      return null;
+    }
+
+    try {
+      const response = await axios.get(
+        'https://production.gameonha.com/api/user',
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+        }
+      );
+
+      if (response.status === 200 && response.data) {
+        const userData = response.data;
+
+        const persistentData = getPersistentUserData(userData.name);
+
+        const user: User = {
+          username: userData.name || 'Unknown',
+          isAdmin: userData.isAdmin === true,
+          ...persistentData
+        };
+
+        setUser(user);
+        return user;
+      } else {
+        console.warn("Unexpected Response Format:", response);
+        return null;
+      }
+    } catch (error: any) {
+      console.error("Error Fetching Authenticated User:", error?.response?.data || error.message);
+      return null;
+    }
+  }, [getPersistentUserData]);
+
+  useEffect(() => {
+    if (!user) {
+      fetchAuthenticatedUser();
+    }
+  }, [user, fetchAuthenticatedUser]);
 
   const handleSelectCase = useCallback((caseItem: CSGOCase) => {
     if (!user) {
@@ -356,7 +426,7 @@ const handleLogin = useCallback(async (email: string, password: string) => {
 
   const handleOpenCase = useCallback((item: CSGOItem, cost: number) => {
     if (!user) return;
-    
+
     setUser(prev => prev ? ({
       ...prev,
       balance: prev.balance - cost,
@@ -367,7 +437,7 @@ const handleLogin = useCallback(async (email: string, password: string) => {
 
   const handleSellItem = useCallback((itemId: string, price: number) => {
     if (!user) return;
-    
+
     setUser(prev => prev ? ({
       ...prev,
       balance: prev.balance + price,
@@ -377,7 +447,7 @@ const handleLogin = useCallback(async (email: string, password: string) => {
 
   const handleAddFunds = useCallback((amount: number) => {
     if (!user) return;
-    
+
     setUser(prev => prev ? ({
       ...prev,
       balance: prev.balance + amount
@@ -386,7 +456,7 @@ const handleLogin = useCallback(async (email: string, password: string) => {
 
   const handleBalanceUpdate = useCallback((amount: number) => {
     if (!user) return;
-    
+
     setUser(prev => prev ? ({
       ...prev,
       balance: prev.balance + amount
@@ -403,11 +473,11 @@ const handleLogin = useCallback(async (email: string, password: string) => {
       setShowLoginModal(true);
       return;
     }
-    
+
     if (view === 'admin' && (!user || !user.isAdmin)) {
       return;
     }
-    
+
     setCurrentView(view);
     if (view !== 'opening') {
       setSelectedCase(null);
@@ -416,7 +486,7 @@ const handleLogin = useCallback(async (email: string, password: string) => {
 
   const handleUpdateCases = useCallback((newCases: CSGOCase[]) => {
     setCases(newCases);
-    
+
     if (selectedCase) {
       const updatedSelectedCase = newCases.find(c => c.id === selectedCase.id);
       if (updatedSelectedCase) {
@@ -436,7 +506,7 @@ const handleLogin = useCallback(async (email: string, password: string) => {
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-gradient-to-r from-orange-500/10 to-orange-600/5 rounded-full filter blur-3xl animate-liquid-float" />
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-gradient-to-r from-orange-400/8 to-orange-500/3 rounded-full filter blur-3xl animate-liquid-float" style={{ animationDelay: '2s' }} />
       <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-radial from-orange-500/5 to-transparent rounded-full animate-liquid-float" style={{ animationDelay: '4s' }} />
-      
+
       {/* Floating Glass Particles */}
       {[...Array(12)].map((_, i) => (
         <div
@@ -473,8 +543,8 @@ const handleLogin = useCallback(async (email: string, password: string) => {
         }} />
       </div>
 
-      <Header 
-        balance={user?.balance || 0} 
+      <Header
+        balance={user?.balance || 0}
         onViewChange={handleViewChange}
         currentView={currentView}
         onAddFunds={handleAddFunds}
@@ -482,7 +552,7 @@ const handleLogin = useCallback(async (email: string, password: string) => {
         onShowLogin={() => setShowLoginModal(true)}
         onLogout={handleLogout}
       />
-      
+
       <main className="relative z-10 pt-32 px-6 pb-12">
         <div className="max-w-7xl mx-auto">
           {/* Hero Section - Only show on cases view */}
@@ -490,9 +560,9 @@ const handleLogin = useCallback(async (email: string, password: string) => {
             <div className="text-center mb-12">
               <div className="flex items-center justify-center space-x-3 mb-4">
                 <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-400 via-orange-500 to-orange-600 flex items-center justify-center shadow-2xl shadow-orange-500/30 overflow-hidden p-2">
-                  <img 
-                    src="/download.webp" 
-                    alt="CleanCase Logo" 
+                  <img
+                    src="/download.webp"
+                    alt="CleanCase Logo"
                     className="w-full h-full object-contain filter brightness-0 invert"
                     loading="eager"
                   />
@@ -528,16 +598,15 @@ const handleLogin = useCallback(async (email: string, password: string) => {
               <div className="flex space-x-2 p-2 rounded-3xl bg-gradient-to-r from-white/10 to-white/5 backdrop-blur-xl border border-white/20 shadow-2xl">
                 <button
                   onClick={() => handleViewChange('cases')}
-                  className={`px-8 py-4 rounded-2xl font-bold transition-all duration-300 flex items-center space-x-2 ${
-                    currentView === 'cases'
-                      ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-2xl shadow-orange-500/30 transform scale-105'
-                      : 'text-white/70 hover:text-white hover:bg-white/10'
-                  }`}
+                  className={`px-8 py-4 rounded-2xl font-bold transition-all duration-300 flex items-center space-x-2 ${currentView === 'cases'
+                    ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-2xl shadow-orange-500/30 transform scale-105'
+                    : 'text-white/70 hover:text-white hover:bg-white/10'
+                    }`}
                 >
                   <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center overflow-hidden p-1">
-                    <img 
-                      src="/download.webp" 
-                      alt="CleanCase Logo" 
+                    <img
+                      src="/download.webp"
+                      alt="CleanCase Logo"
                       className="w-full h-full object-contain filter brightness-0 invert"
                       loading="lazy"
                     />
@@ -546,11 +615,10 @@ const handleLogin = useCallback(async (email: string, password: string) => {
                 </button>
                 <button
                   onClick={() => handleViewChange('inventory')}
-                  className={`px-8 py-4 rounded-2xl font-bold transition-all duration-300 flex items-center space-x-2 ${
-                    currentView === 'inventory'
-                      ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-2xl shadow-orange-500/30 transform scale-105'
-                      : 'text-white/70 hover:text-white hover:bg-white/10'
-                  }`}
+                  className={`px-8 py-4 rounded-2xl font-bold transition-all duration-300 flex items-center space-x-2 ${currentView === 'inventory'
+                    ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-2xl shadow-orange-500/30 transform scale-105'
+                    : 'text-white/70 hover:text-white hover:bg-white/10'
+                    }`}
                 >
                   <Sparkles className="w-5 h-5" />
                   <span>Inventory ({user?.inventory.length || 0})</span>
@@ -568,7 +636,7 @@ const handleLogin = useCallback(async (email: string, password: string) => {
                 onSelectCase={handleSelectCase}
               />
             )}
-            
+
             {currentView === 'opening' && selectedCase && user && (
               <CaseOpener
                 selectedCase={selectedCase}
@@ -577,29 +645,29 @@ const handleLogin = useCallback(async (email: string, password: string) => {
                 onBack={handleBackToCases}
               />
             )}
-            
+
             {currentView === 'inventory' && user && (
-              <Inventory 
-                items={user.inventory} 
+              <Inventory
+                items={user.inventory}
                 onSellItem={handleSellItem}
               />
             )}
 
             {currentView === 'profile' && user && (
-              <UserProfile 
+              <UserProfile
                 user={user}
                 onBack={() => handleViewChange('cases')}
               />
             )}
 
             {currentView === 'settings' && (
-              <Settings 
+              <Settings
                 onBack={() => handleViewChange('cases')}
               />
             )}
 
             {currentView === 'crypto' && user && (
-              <CryptoWallet 
+              <CryptoWallet
                 onBack={() => handleViewChange('cases')}
                 userBalance={user.balance}
                 onBalanceUpdate={handleBalanceUpdate}
@@ -607,7 +675,7 @@ const handleLogin = useCallback(async (email: string, password: string) => {
             )}
 
             {currentView === 'steam' && user && (
-              <SteamIntegration 
+              <SteamIntegration
                 onBack={() => handleViewChange('cases')}
                 user={user}
                 onUpdateUser={handleUpdateUser}
@@ -615,7 +683,7 @@ const handleLogin = useCallback(async (email: string, password: string) => {
             )}
 
             {currentView === 'admin' && user?.isAdmin && (
-              <AdminPanel 
+              <AdminPanel
                 onBack={() => handleViewChange('cases')}
                 cases={cases}
                 onUpdateCases={handleUpdateCases}
@@ -631,7 +699,7 @@ const handleLogin = useCallback(async (email: string, password: string) => {
         onClose={() => setShowLoginModal(false)}
         onLogin={handleLogin}
         onRegister={handleRegister}
-        
+
       />
 
       {/* Liquid Glass Footer */}
@@ -640,9 +708,9 @@ const handleLogin = useCallback(async (email: string, password: string) => {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center overflow-hidden p-1.5 animate-glow-pulse">
-                <img 
-                  src="/download.webp" 
-                  alt="CleanCase Logo" 
+                <img
+                  src="/download.webp"
+                  alt="CleanCase Logo"
                   className="w-full h-full object-contain filter brightness-0 invert"
                   loading="lazy"
                 />
