@@ -34,7 +34,7 @@ function App() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   console.log("User", user)
-  
+
   // Memoized loading component
   const LoadingScreen = useMemo(() => (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 flex items-center justify-center">
@@ -231,7 +231,6 @@ function App() {
   const handleLogin = useCallback(async (email: string, password: string) => {
     try {
       await new Promise(resolve => setTimeout(resolve, 1000));
-
       let response;
 
       try {
@@ -263,7 +262,7 @@ function App() {
       const token = response.data?.token;
       if (!token) {
         console.error("No Token Found in login Response", response.data);
-        alert("Login failed: Token not Received.");
+        alert(response?.data?.message || "Login failed: Token not Received.");
         return;
       }
 
@@ -278,9 +277,12 @@ function App() {
       setUser(mockUser);
       setShowLoginModal(false);
 
-    } catch (error) {
-      console.error('Login failed completely:', error);
-      alert('Login failed. Please Check your Credentials and Try Again.');
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.message;
+      if (message) {
+        alert(message);
+      }
     }
   }, [getPersistentUserData]);
 
@@ -309,13 +311,9 @@ function App() {
             },
           }
         );
-
-        console.log("Response Received:", response.data);
-
         const responseData = response.data?.user || response.data;
         console.log("Processed Response Data:", responseData);
-        setShowLoginModal(true);
-        console.log("Registration Successful, showing Login Modal.");
+
       } catch (error: any) {
         const message =
           error?.response?.data?.message ||
