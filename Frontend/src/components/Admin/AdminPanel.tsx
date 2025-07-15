@@ -6,148 +6,16 @@ import WeaponManager from './WeaponManager';
 import axios from 'axios';
 import { showSuccess } from '../../toast';
 import { toast } from 'react-toastify';
+import { useToast } from '../ToastContext';
 
 interface AdminPanelProps {
   onBack: () => void;
   cases: CSGOCase[];
+  AllCases: CSGOCase[];
   onUpdateCases: (cases: CSGOCase[]) => void;
 }
 
-// Mock user data for demonstration
-const mockUsers = [
-  {
-    id: '1',
-    username: 'SkinHunter2024',
-    email: 'skinhunter@example.com',
-    balance: 1250.75,
-    totalOpened: 45,
-    level: 12,
-    joinDate: new Date('2024-01-15'),
-    lastLogin: new Date('2024-12-15'),
-    isAdmin: false,
-    status: 'active',
-    totalSpent: 2340.50,
-    totalWon: 1890.25,
-    inventoryValue: 3200.80,
-    ipAddress: '192.168.1.100',
-    country: 'United States',
-    verified: true,
-    twoFactorEnabled: false
-  },
-  {
-    id: '2',
-    username: 'ProGamer_Mike',
-    email: 'mike@example.com',
-    balance: 89.30,
-    totalOpened: 23,
-    level: 8,
-    joinDate: new Date('2024-02-20'),
-    lastLogin: new Date('2024-12-14'),
-    isAdmin: false,
-    status: 'active',
-    totalSpent: 1150.00,
-    totalWon: 980.50,
-    inventoryValue: 1450.75,
-    ipAddress: '10.0.0.50',
-    country: 'Canada',
-    verified: true,
-    twoFactorEnabled: true
-  },
-  {
-    id: '3',
-    username: 'CaseKing_77',
-    email: 'caseking@example.com',
-    balance: 2890.45,
-    totalOpened: 156,
-    level: 25,
-    joinDate: new Date('2023-11-10'),
-    lastLogin: new Date('2024-12-15'),
-    isAdmin: false,
-    status: 'active',
-    totalSpent: 8750.00,
-    totalWon: 7200.30,
-    inventoryValue: 12500.90,
-    ipAddress: '172.16.0.25',
-    country: 'United Kingdom',
-    verified: true,
-    twoFactorEnabled: true
-  },
-  {
-    id: '4',
-    username: 'LuckyShot_99',
-    email: 'lucky@example.com',
-    balance: 45.20,
-    totalOpened: 8,
-    level: 3,
-    joinDate: new Date('2024-12-01'),
-    lastLogin: new Date('2024-12-13'),
-    isAdmin: false,
-    status: 'active',
-    totalSpent: 320.00,
-    totalWon: 280.75,
-    inventoryValue: 450.30,
-    ipAddress: '203.0.113.15',
-    country: 'Australia',
-    verified: false,
-    twoFactorEnabled: false
-  },
-  {
-    id: '5',
-    username: 'BannedUser123',
-    email: 'banned@example.com',
-    balance: 0.00,
-    totalOpened: 12,
-    level: 5,
-    joinDate: new Date('2024-10-15'),
-    lastLogin: new Date('2024-11-20'),
-    isAdmin: false,
-    status: 'banned',
-    totalSpent: 500.00,
-    totalWon: 150.00,
-    inventoryValue: 0.00,
-    ipAddress: '198.51.100.42',
-    country: 'Germany',
-    verified: false,
-    twoFactorEnabled: false
-  }
-];
-
-// Mock analytics data
-const mockAnalytics = {
-  totalRevenue: 125750.80,
-  totalUsers: 1247,
-  activeUsers: 892,
-  totalCasesOpened: 8934,
-  averageSpendPerUser: 89.50,
-  conversionRate: 12.5,
-  revenueGrowth: 15.8,
-  userGrowth: 8.3,
-  dailyStats: [
-    { date: '2024-12-09', revenue: 2340.50, users: 45, casesOpened: 156 },
-    { date: '2024-12-10', revenue: 2890.75, users: 52, casesOpened: 189 },
-    { date: '2024-12-11', revenue: 3120.30, users: 48, casesOpened: 203 },
-    { date: '2024-12-12', revenue: 2750.90, users: 41, casesOpened: 178 },
-    { date: '2024-12-13', revenue: 3450.20, users: 58, casesOpened: 234 },
-    { date: '2024-12-14', revenue: 4120.80, users: 67, casesOpened: 289 },
-    { date: '2024-12-15', revenue: 3890.45, users: 61, casesOpened: 267 }
-  ],
-  topSpenders: [
-    { username: 'CaseKing_77', totalSpent: 8750.00 },
-    { username: 'WhalePlayer', totalSpent: 6890.50 },
-    { username: 'HighRoller88', totalSpent: 5430.75 },
-    { username: 'SkinCollector', totalSpent: 4920.30 },
-    { username: 'LegendaryHunter', totalSpent: 4150.80 }
-  ],
-  popularCases: [
-    { name: 'Spectrum Case', opens: 2340, revenue: 5850.00 },
-    { name: 'Chroma Case', opens: 1890, revenue: 5197.50 },
-    { name: 'Revolution Case', opens: 1560, revenue: 7800.00 },
-    { name: 'Prisma Case', opens: 1234, revenue: 5553.00 },
-    { name: 'Operation Hydra Case', opens: 987, revenue: 3207.75 }
-  ]
-};
-
-export default function AdminPanel({ onBack, cases, onUpdateCases }: AdminPanelProps) {
+export default function AdminPanel({ onBack, cases, onUpdateCases, caseResponse, AllCases, fetchCases, refCase, nextPageCases }: AdminPanelProps) {
   const [activeTab, setActiveTab] = useState<'cases' | 'weapons' | 'users' | 'analytics'>('cases');
   const [selectedCase, setSelectedCase] = useState<CSGOCase | null>(null);
   const [editingItem, setEditingItem] = useState<CSGOItem | null>(null);
@@ -155,7 +23,6 @@ export default function AdminPanel({ onBack, cases, onUpdateCases }: AdminPanelP
   const [showWeaponManager, setShowWeaponManager] = useState(false);
 
   // User management states
-  const [users, setUsers] = useState(mockUsers);
   const [userSearchTerm, setUserSearchTerm] = useState('');
   const [userFilter, setUserFilter] = useState<'all' | 'active' | 'banned' | 'verified' | 'unverified'>('all');
   const [selectedUser, setSelectedUser] = useState<any>(null);
@@ -164,10 +31,33 @@ export default function AdminPanel({ onBack, cases, onUpdateCases }: AdminPanelP
   const [showEditUserModal, setShowEditUserModal] = useState(false);
   const [addFundsAmount, setAddFundsAmount] = useState('');
   const [addFundsReason, setAddFundsReason] = useState('');
+  const [isFetchingCase, setIsFetchingCase] = useState(false);
+  const [AnalyticsData, setAnalyticsData] = useState(null);
+  console.log("AnalyticsData", AnalyticsData)
+
+  const { showToast } = useToast();
 
   const [allUsers, setAllUsers] = useState<any[]>([]);
   console.log("All Users", allUsers)
   console.log("View User", selectedUser)
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const container = refCase.current;
+      if (!container || isFetchingCase || !nextPageCases) return;
+
+      const { scrollTop, scrollHeight, clientHeight } = container;
+
+      if (scrollTop + clientHeight >= scrollHeight - 100) {
+        setIsFetchingCase(true);
+        fetchCases(nextPageCases, true).finally(() => setIsFetchingCase(false));
+      }
+    };
+
+    const container = refCase.current;
+    container?.addEventListener('scroll', handleScroll);
+    return () => container?.removeEventListener('scroll', handleScroll);
+  }, [nextPageCases, isFetchingCase]);
 
   // Edit user form
   const [editUserForm, setEditUserForm] = useState({
@@ -181,9 +71,12 @@ export default function AdminPanel({ onBack, cases, onUpdateCases }: AdminPanelP
   // Form states
   const [caseForm, setCaseForm] = useState({
     name: '',
-    price: '',
+    market_hash_name: '',
+    description: '',
     image: '',
-    isActive: true
+    status: 'active',
+    price: null,
+    rental: false,
   });
 
   const [itemForm, setItemForm] = useState({
@@ -195,11 +88,53 @@ export default function AdminPanel({ onBack, cases, onUpdateCases }: AdminPanelP
   });
 
   const resetCaseForm = () => {
-    setCaseForm({ name: '', price: '', image: '', isActive: true });
+    setCaseForm({
+      name: '',
+      market_hash_name: '',
+      description: '',
+      image: '',
+      status: 'active',
+      price: null,
+      rental: false,
+    });
   };
 
   const resetItemForm = () => {
     setItemForm({ name: '', rarity: 'common', price: '', image: '', probability: '' });
+  };
+
+  useEffect(() => {
+    fetchAnalytics();
+  }, []);
+
+  const fetchAnalytics = async () => {
+    const token = sessionStorage.getItem('auth_token');
+
+    if (!token) {
+      showToast("Auth Token not Found", "info");
+      return;
+    }
+
+    try {
+      const response = await axios.get('https://production.gameonha.com/api/admin/analytics', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      console.log('Analytics Response:', response);
+      setAnalyticsData(response?.data);
+
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        error?.message ||
+        'Failed to fetch Analytics. Please Try Again.';
+
+      console.error('Failed to fetch Analytics:', message);
+      showToast(message, "error");
+    }
   };
 
   useEffect(() => {
@@ -210,7 +145,7 @@ export default function AdminPanel({ onBack, cases, onUpdateCases }: AdminPanelP
     const token = sessionStorage.getItem('auth_token');
 
     if (!token) {
-      alert('Authentication Token not Found');
+      showToast("Auth Token not Found", "info");
       return;
     }
 
@@ -232,56 +167,101 @@ export default function AdminPanel({ onBack, cases, onUpdateCases }: AdminPanelP
         'Failed to Fetch users. Please Try Again.';
 
       console.error('Failed to fetch users:', message);
-      alert(message);
+      showToast(message, "error");
     }
   };
 
-  const handleSaveCase = () => {
-    const price = parseFloat(caseForm.price);
-
+  const handleSaveCase = async () => {
     if (!caseForm.name.trim()) {
-      alert('Please enter a case name');
+      showToast("Please Enter a Case Name", "info");
       return;
     }
 
     if (!caseForm.image.trim()) {
-      alert('Please enter an image URL');
+      showToast("Please Enter an image URL", "info");
       return;
     }
 
-    if (isNaN(price) || price <= 0) {
-      alert('Please enter a valid price');
+    if (caseForm.price !== null && (isNaN(caseForm.price) || caseForm.price < 0)) {
+      showToast("Please Enter a valid Price", "info");
       return;
     }
 
-    const newCase: CSGOCase = {
-      id: `case-${Date.now()}`,
-      name: caseForm.name.trim(),
-      price: price,
-      image: caseForm.image.trim(),
-      items: [],
-      isActive: caseForm.isActive
-    };
+    const token = sessionStorage.getItem("auth_token");
+    if (!token) {
+      showToast("Auth Token not Found", "info");
+      return;
+    }
 
-    onUpdateCases([...cases, newCase]);
-    resetCaseForm();
-    setShowAddCase(false);
+    try {
+      const response = await fetch("https://production.gameonha.com/api/admin/crates", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: caseForm.name.trim(),
+          market_hash_name: caseForm.market_hash_name?.trim() || caseForm.name.trim(),
+          description: caseForm.description?.trim() || null,
+          image: caseForm.image.trim(),
+          price: caseForm.price,
+          rental: caseForm.rental ?? 0,
+          status: caseForm.status || "inactive",
+          type: "Case"
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error("API error:", data);
+        showToast("Failed to Save Case", "error");
+        return;
+      }
+
+      showToast("Case Create Successfully!", "success");
+      resetCaseForm();
+      setShowAddCase(false);
+      fetchCases();
+    } catch (error) {
+      console.error("Error saving case:", error);
+      showToast("Something went wrong While saving the Case.", "error");
+    }
   };
 
-  const handleDeleteCase = (caseId: string) => {
-    if (!confirm('Are you sure you want to delete this case? This action cannot be undone.')) return;
+  const handleDeleteCase = async (caseId: string) => {
+    const token = sessionStorage.getItem('auth_token');
+    const baseURL = 'https://production.gameonha.com';
 
-    onUpdateCases(cases.filter(c => c.id !== caseId));
+    if (!token) {
+      showToast("Auth Token not Found", "info");
+      return;
+    }
 
-    if (selectedCase && selectedCase.id === caseId) {
-      setSelectedCase(null);
+    try {
+      await axios.delete(`${baseURL}/api/admin/crates/${caseId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      fetchCases();
+      showToast('Case Deleted Successfully.', "success");
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        error?.message ||
+        'Failed to delete the case.';
+      console.error('Delete error:', message);
+      showToast(message, "error");
     }
   };
 
   const handleSelectWeaponsForCase = (weapons: CSGOItem[]) => {
     if (!selectedCase) return;
 
-    const updatedCases = cases.map(c =>
+    const updatedCases = AllCases?.map(c =>
       c.id === selectedCase.id
         ? { ...c, items: weapons }
         : c
@@ -335,7 +315,7 @@ export default function AdminPanel({ onBack, cases, onUpdateCases }: AdminPanelP
     if (action === 'view') {
       const token = sessionStorage.getItem('auth_token');
       if (!token) {
-        alert('Authentication Token not Found');
+        showToast("Auth Token not Found", "info");
         return;
       }
 
@@ -350,7 +330,7 @@ export default function AdminPanel({ onBack, cases, onUpdateCases }: AdminPanelP
         setShowUserModal(true);
       } catch (error) {
         console.error('Failed to fetch user details:', error);
-        alert('Failed to load user Details. Please Try Again.');
+        showToast('Failed to load user Details. Please Try Again.', "error");
       }
 
       return;
@@ -359,7 +339,7 @@ export default function AdminPanel({ onBack, cases, onUpdateCases }: AdminPanelP
     if (action === 'edit') {
       const token = sessionStorage.getItem('auth_token');
       if (!token) {
-        alert('Authentication Token not Found');
+        showToast("Auth Token not Found", "info");
         return;
       }
 
@@ -384,7 +364,7 @@ export default function AdminPanel({ onBack, cases, onUpdateCases }: AdminPanelP
         setShowEditUserModal(true);
       } catch (error) {
         console.error('Failed to load User for Editing:', error);
-        alert('Failed to load User. Please Try Again.');
+        showToast('Failed to load User. Please Try Again.', "error");
       }
       return;
     }
@@ -392,7 +372,7 @@ export default function AdminPanel({ onBack, cases, onUpdateCases }: AdminPanelP
     if (action === 'addFunds') {
       const token = sessionStorage.getItem('auth_token');
       if (!token) {
-        alert('Authentication Token not Found');
+        showToast("Auth Token not Found", "info");
         return;
       }
 
@@ -418,7 +398,7 @@ export default function AdminPanel({ onBack, cases, onUpdateCases }: AdminPanelP
         setShowAddFundsModal(true);
       } catch (error) {
         console.error('Failed to Fetch User for Adding Funds:', error);
-        alert('Failed to load User. Please Try Again.');
+        showToast('Failed to load User. Please Try Again.', "error");
       }
       return;
     }
@@ -426,7 +406,7 @@ export default function AdminPanel({ onBack, cases, onUpdateCases }: AdminPanelP
     if (action === 'makeAdmin') {
       const token = sessionStorage.getItem('auth_token');
       if (!token) {
-        alert('Authentication Token not Found');
+        showToast("Auth Token not Found", "info");
         return;
       }
 
@@ -439,10 +419,10 @@ export default function AdminPanel({ onBack, cases, onUpdateCases }: AdminPanelP
         });
 
         fetchUsers();
-        alert('User successfully made Admin.');
+        showToast('User successfully made Admin.', "success");
       } catch (error) {
         console.error('Failed to make Admin:', error);
-        alert('Failed to make Admin. Please Try Again.');
+        showToast('Failed to make Admin. Please Try Again.', "error");
       }
       return;
     }
@@ -450,7 +430,7 @@ export default function AdminPanel({ onBack, cases, onUpdateCases }: AdminPanelP
     if (action === 'removeAdmin') {
       const token = sessionStorage.getItem('auth_token');
       if (!token) {
-        alert('Authentication Token not Found');
+        showToast("Auth Token not Found", "info");
         return;
       }
 
@@ -463,10 +443,10 @@ export default function AdminPanel({ onBack, cases, onUpdateCases }: AdminPanelP
         });
 
         fetchUsers();
-        alert('User successfully Remove From Admin.');
+        showToast('User successfully Remove From Admin.', "success");
       } catch (error) {
         console.error('Failed to make admin:', error);
-        alert('Failed to UnMake Admin. Please Try Again.');
+        showToast('Failed to UnMake Admin. Please Try Again.', "error");
       }
       return;
     }
@@ -474,7 +454,7 @@ export default function AdminPanel({ onBack, cases, onUpdateCases }: AdminPanelP
     if (action === 'ban' || action === 'unban') {
       const token = sessionStorage.getItem('auth_token');
       if (!token) {
-        alert('Authentication Token not Found');
+        showToast("Auth Token not Found", "info");
         return;
       }
 
@@ -493,12 +473,11 @@ export default function AdminPanel({ onBack, cases, onUpdateCases }: AdminPanelP
         );
 
         fetchUsers();
-        alert(`User status updated to ${newStatus}`);
+        showToast(`User status updated to ${newStatus}`, "success");
       } catch (error) {
         console.error(`Failed to update status to ${newStatus}:`, error);
-        alert('Failed to Update user status. Please Try Again.');
+        showToast('Failed to Update user status. Please, Try Again.', "error");
       }
-
       return;
     }
 
@@ -508,13 +487,13 @@ export default function AdminPanel({ onBack, cases, onUpdateCases }: AdminPanelP
     const amount = parseFloat(addFundsAmount);
 
     if (isNaN(amount) || amount <= 0) {
-      alert('Please Enter a valid Amount');
+      showToast("Please Enter a valid Amount", "info");
       return;
     }
 
     const token = sessionStorage.getItem('auth_token');
     if (!token) {
-      alert('Authentication Token not Found');
+      showToast("Auth Token not Found", "info");
       return;
     }
 
@@ -534,7 +513,7 @@ export default function AdminPanel({ onBack, cases, onUpdateCases }: AdminPanelP
       );
       console.log(response)
       fetchUsers();
-      alert('Funds Added Successfully!');
+      showToast('Funds Added Successfully!', "success");
 
       setShowAddFundsModal(false);
       setAddFundsAmount('');
@@ -542,19 +521,19 @@ export default function AdminPanel({ onBack, cases, onUpdateCases }: AdminPanelP
       setSelectedUser(null);
     } catch (error: any) {
       console.error('Failed to Add Funds:', error?.response?.data || error);
-      alert('Failed to Add funds. Please Try Again.');
+      showToast('Failed to Add funds. Please Try Again.', "error");
     }
   };
 
   const handleEditUser = async () => {
     if (!editUserForm.username.trim() || !editUserForm.email.trim()) {
-      alert('Username and Email are Required');
+      showToast('Username and Email are Required', "info");
       return;
     }
 
     const token = sessionStorage.getItem('auth_token');
     if (!token) {
-      alert('Authentication Token not Found');
+       showToast("Auth Token not Found", "info");
       return;
     }
 
@@ -579,17 +558,26 @@ export default function AdminPanel({ onBack, cases, onUpdateCases }: AdminPanelP
       );
       console.log("Update response:", res.data);
       fetchUsers();
-      alert('User Updated Successfully!');
+      showToast('User Updated Successfully!', "success");
       setShowEditUserModal(false);
       setSelectedUser(null);
     } catch (error: any) {
       console.error('User Update Failed:', error?.response?.data || error);
-      alert('Failed to Update User. Please Try Again.');
+      showToast('Failed to Update User. Please Try Again.', "error");
     }
   };
 
-  const totalItems = cases.reduce((sum, c) => sum + c.items.length, 0);
-  const totalValue = cases.reduce((sum, c) => sum + c.items.reduce((itemSum, item) => itemSum + item.price, 0), 0);
+  const totalItems = AllCases?.reduce((sum, c) => sum + (c.items?.length || 0), 0);
+
+  const totalValue = AllCases?.reduce((sum, c) => {
+    const itemsValue = c.items?.reduce((itemSum, item) => {
+      const price = typeof item.price === "number" ? item.price : parseFloat(item.price);
+      return itemSum + (!isNaN(price) ? price : 0);
+    }, 0);
+    return sum + (itemsValue || 0);
+  }, 0);
+
+  const formattedTotal = totalValue?.toFixed(2);
 
   return (
     <div className="w-full max-w-7xl mx-auto">
@@ -648,11 +636,13 @@ export default function AdminPanel({ onBack, cases, onUpdateCases }: AdminPanelP
           {/* Stats */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="p-6 rounded-2xl bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md border border-white/20 shadow-xl text-center">
-              <div className="text-2xl font-bold text-white mb-1">{cases.length}</div>
+              <div className="text-2xl font-bold text-white mb-1">{AllCases?.length}</div>
               <div className="text-sm text-gray-400">Total Cases</div>
             </div>
             <div className="p-6 rounded-2xl bg-gradient-to-br from-green-500/20 to-green-600/20 backdrop-blur-md border border-green-400/30 shadow-xl text-center">
-              <div className="text-2xl font-bold text-green-400 mb-1">{cases.filter(c => c.isActive !== false).length}</div>
+              <div className="text-2xl font-bold text-green-400 mb-1">
+                {AllCases?.filter(c => c?.status === "active").length}
+              </div>
               <div className="text-sm text-green-300">Active Cases</div>
             </div>
             <div className="p-6 rounded-2xl bg-gradient-to-br from-blue-500/20 to-blue-600/20 backdrop-blur-md border border-blue-400/30 shadow-xl text-center">
@@ -660,7 +650,7 @@ export default function AdminPanel({ onBack, cases, onUpdateCases }: AdminPanelP
               <div className="text-sm text-blue-300">Total Items</div>
             </div>
             <div className="p-6 rounded-2xl bg-gradient-to-br from-purple-500/20 to-purple-600/20 backdrop-blur-md border border-purple-400/30 shadow-xl text-center">
-              <div className="text-2xl font-bold text-purple-400 mb-1">${totalValue.toFixed(0)}</div>
+              <div className="text-2xl font-bold text-purple-400 mb-1">${formattedTotal}</div>
               <div className="text-sm text-purple-300">Total Value</div>
             </div>
           </div>
@@ -678,11 +668,11 @@ export default function AdminPanel({ onBack, cases, onUpdateCases }: AdminPanelP
           </div>
 
           {/* Cases Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {cases.map((caseItem) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 h-[32rem] overflow-y-auto scrollbar-hide" ref={refCase}>
+            {AllCases?.map((caseItem) => (
               <div key={caseItem.id} className="p-6 rounded-3xl bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl border border-white/20 shadow-2xl hover:shadow-orange-500/20 transition-all duration-300">
                 <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-white font-bold text-lg truncate">{caseItem.name}</h4>
+                  <h4 className="text-white font-bold text-lg truncate">{caseItem?.name}</h4>
                   <div className="flex space-x-2">
                     <button
                       onClick={() => {
@@ -705,8 +695,8 @@ export default function AdminPanel({ onBack, cases, onUpdateCases }: AdminPanelP
                 </div>
 
                 <img
-                  src={caseItem.image}
-                  alt={caseItem.name}
+                  src={caseItem?.image}
+                  alt={caseItem?.name}
                   className="w-full h-32 object-cover rounded-xl mb-4"
                   onError={(e) => {
                     e.currentTarget.src = 'https://images.pexels.com/photos/1181675/pexels-photo-1181675.jpeg?auto=compress&cs=tinysrgb&w=400';
@@ -716,7 +706,13 @@ export default function AdminPanel({ onBack, cases, onUpdateCases }: AdminPanelP
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span className="text-gray-400">Price:</span>
-                    <span className="text-orange-400 font-bold">${caseItem.price.toFixed(2)}</span>
+                    <span className="text-orange-400 font-bold">
+                      ${
+                        !isNaN(parseFloat(caseItem?.price)) && isFinite(caseItem.price)
+                          ? parseFloat(caseItem?.price).toFixed(2)
+                          : "0.00"
+                      }
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-400">Items:</span>
@@ -724,14 +720,24 @@ export default function AdminPanel({ onBack, cases, onUpdateCases }: AdminPanelP
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-400">Status:</span>
-                    <span className={caseItem.isActive !== false ? 'text-green-400' : 'text-red-400'}>
-                      {caseItem.isActive !== false ? 'Active' : 'Inactive'}
+                    <span className={caseItem?.status === "active" ? 'text-green-400' : 'text-red-400'}>
+                      {caseItem.status === "active" ? 'Active' : 'InActive'}
                     </span>
                   </div>
                 </div>
               </div>
             ))}
           </div>
+
+          {isFetchingCase && (
+            <div className="flex justify-center mt-4 space-x-1">
+              <div className="w-2 h-2 rounded-full bg-orange-400 animate-bounce [animation-delay:0s]"></div>
+              <div className="w-2 h-2 rounded-full bg-orange-400 animate-bounce [animation-delay:0.1s]"></div>
+              <div className="w-2 h-2 rounded-full bg-orange-400 animate-bounce [animation-delay:0.2s]"></div>
+              <div className="w-2 h-2 rounded-full bg-orange-400 animate-bounce [animation-delay:0.3s]"></div>
+              <div className="w-2 h-2 rounded-full bg-orange-400 animate-bounce [animation-delay:0.4s]"></div>
+            </div>
+          )}
         </div>
       )}
 
@@ -746,6 +752,8 @@ export default function AdminPanel({ onBack, cases, onUpdateCases }: AdminPanelP
           <WeaponManager
             onSelectWeapons={() => { }}
             selectedWeapons={[]}
+            selectedCase={selectedCase}
+            setSelectedCase={setSelectedCase}
           />
         </div>
       )}
@@ -961,11 +969,13 @@ export default function AdminPanel({ onBack, cases, onUpdateCases }: AdminPanelP
               <div className="flex items-center justify-center mb-2">
                 <DollarSign className="w-6 h-6 text-green-400" />
               </div>
-              <div className="text-2xl font-bold text-green-400 mb-1">${mockAnalytics.totalRevenue.toLocaleString()}</div>
+              <div className="text-2xl font-bold text-green-400 mb-1">
+                ${AnalyticsData?.total_revenue?.toLocaleString() ?? 'Loading...'}
+              </div>
               <div className="text-sm text-green-300">Total Revenue</div>
               <div className="flex items-center justify-center mt-2">
                 <TrendingUp className="w-4 h-4 text-green-400 mr-1" />
-                <span className="text-green-400 text-sm">+{mockAnalytics.revenueGrowth}%</span>
+                <span className="text-green-400 text-sm">+{AnalyticsData?.revenue_growth}%</span>
               </div>
             </div>
 
@@ -973,11 +983,12 @@ export default function AdminPanel({ onBack, cases, onUpdateCases }: AdminPanelP
               <div className="flex items-center justify-center mb-2">
                 <Users className="w-6 h-6 text-blue-400" />
               </div>
-              <div className="text-2xl font-bold text-blue-400 mb-1">{mockAnalytics.totalUsers.toLocaleString()}</div>
+              <div className="text-2xl font-bold text-blue-400 mb-1">{AnalyticsData?.total_users.toLocaleString()}</div>
               <div className="text-sm text-blue-300">Total Users</div>
               <div className="flex items-center justify-center mt-2">
                 <TrendingUp className="w-4 h-4 text-blue-400 mr-1" />
-                <span className="text-blue-400 text-sm">+{mockAnalytics.userGrowth}%</span>
+                <span className="text-blue-400 text-sm">
+                  +{AnalyticsData.user_growth}%</span>
               </div>
             </div>
 
@@ -985,7 +996,7 @@ export default function AdminPanel({ onBack, cases, onUpdateCases }: AdminPanelP
               <div className="flex items-center justify-center mb-2">
                 <Package className="w-6 h-6 text-purple-400" />
               </div>
-              <div className="text-2xl font-bold text-purple-400 mb-1">{mockAnalytics.totalCasesOpened.toLocaleString()}</div>
+              <div className="text-2xl font-bold text-purple-400 mb-1">{AnalyticsData?.cases_opened_this_month.toLocaleString()}</div>
               <div className="text-sm text-purple-300">Cases Opened</div>
               <div className="text-purple-300 text-sm mt-2">This Month</div>
             </div>
@@ -994,9 +1005,11 @@ export default function AdminPanel({ onBack, cases, onUpdateCases }: AdminPanelP
               <div className="flex items-center justify-center mb-2">
                 <TrendingUp className="w-6 h-6 text-orange-400" />
               </div>
-              <div className="text-2xl font-bold text-orange-400 mb-1">{mockAnalytics.conversionRate}%</div>
+              <div className="text-2xl font-bold text-orange-400 mb-1">{AnalyticsData?.conversion_rate}%</div>
               <div className="text-sm text-orange-300">Conversion Rate</div>
-              <div className="text-orange-300 text-sm mt-2">Avg. ${mockAnalytics.averageSpendPerUser}</div>
+              <div className="text-orange-300 text-sm mt-2">
+                Avg. ${AnalyticsData?.conversion_avg}
+              </div>
             </div>
           </div>
 
@@ -1007,12 +1020,12 @@ export default function AdminPanel({ onBack, cases, onUpdateCases }: AdminPanelP
               <span>Daily Revenue (Last 7 Days)</span>
             </h3>
             <div className="space-y-4">
-              {mockAnalytics.dailyStats.map((day, index) => (
+              {AnalyticsData.daily_revenue.map((day, index) => (
                 <div key={day.date} className="flex items-center justify-between p-4 rounded-lg bg-white/5">
                   <div className="flex items-center space-x-4">
                     <div className="text-white font-semibold">{new Date(day.date).toLocaleDateString()}</div>
                     <div className="text-gray-400">{day.users} users</div>
-                    <div className="text-gray-400">{day.casesOpened} cases</div>
+                    <div className="text-gray-400">{day.cases} cases</div>
                   </div>
                   <div className="flex items-center space-x-4">
                     <div className="w-32 bg-gray-700 rounded-full h-2">
@@ -1037,7 +1050,7 @@ export default function AdminPanel({ onBack, cases, onUpdateCases }: AdminPanelP
                 <span>Top Spenders</span>
               </h3>
               <div className="space-y-3">
-                {mockAnalytics.topSpenders.map((spender, index) => (
+                {AnalyticsData.top_spenders?.map((spender, index) => (
                   <div key={spender.username} className="flex items-center justify-between p-3 rounded-lg bg-white/5">
                     <div className="flex items-center space-x-3">
                       <div className="w-6 h-6 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-white text-xs font-bold">
@@ -1058,7 +1071,7 @@ export default function AdminPanel({ onBack, cases, onUpdateCases }: AdminPanelP
                 <span>Popular Cases</span>
               </h3>
               <div className="space-y-3">
-                {mockAnalytics.popularCases.map((caseData, index) => (
+                {AnalyticsData.popular_cases?.map((caseData, index) => (
                   <div key={caseData.name} className="p-3 rounded-lg bg-white/5">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-white font-semibold">{caseData.name}</span>
@@ -1083,90 +1096,129 @@ export default function AdminPanel({ onBack, cases, onUpdateCases }: AdminPanelP
 
       {/* Add Case Modal */}
       {showAddCase && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm">
-          <div className="w-full max-w-md mx-4 rounded-3xl bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl border border-white/20 shadow-2xl overflow-hidden">
-            <div className="p-8">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-2xl font-bold text-white">Add New Case</h3>
-                <button
-                  onClick={() => {
-                    setShowAddCase(false);
-                    resetCaseForm();
-                  }}
-                  className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors duration-300"
-                >
-                  <X className="w-5 h-5 text-white" />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">Case Name *</label>
-                  <input
-                    type="text"
-                    value={caseForm.name}
-                    onChange={(e) => setCaseForm(prev => ({ ...prev, name: e.target.value }))}
-                    className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-orange-400/50"
-                    placeholder="Enter case name"
-                    required
-                  />
+        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm overflow-y-auto mt-3">
+          <div className="flex min-h-screen items-center justify-center px-4 py-16">
+            <div className="w-full max-w-md mx-4 rounded-3xl bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl border border-white/20 shadow-2xl overflow-hidden">
+              <div className="p-8">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-2xl font-bold text-white">Add New Case</h3>
+                  <button
+                    onClick={() => {
+                      setShowAddCase(false);
+                      resetCaseForm();
+                    }}
+                    className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors duration-300"
+                  >
+                    <X className="w-5 h-5 text-white" />
+                  </button>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">Price ($) *</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={caseForm.price}
-                    onChange={(e) => setCaseForm(prev => ({ ...prev, price: e.target.value }))}
-                    className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-orange-400/50"
-                    placeholder="0.00"
-                    required
-                  />
+                <div className="space-y-4">
+                  {/* Case Name */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">Case Name *</label>
+                    <input
+                      type="text"
+                      value={caseForm.name}
+                      onChange={(e) => setCaseForm(prev => ({ ...prev, name: e.target.value }))}
+                      className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-orange-400/50"
+                      placeholder="Name"
+                      required
+                    />
+                  </div>
+
+                  {/* Market Hash Name */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">Market Hash Name *</label>
+                    <input
+                      type="text"
+                      value={caseForm.market_hash_name}
+                      onChange={(e) => setCaseForm(prev => ({ ...prev, market_hash_name: e.target.value }))}
+                      className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-orange-400/50"
+                      placeholder="Market Hash Name"
+                    />
+                  </div>
+
+                  {/* Image URL */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">Image URL *</label>
+                    <input
+                      type="url"
+                      value={caseForm.image}
+                      onChange={(e) => setCaseForm(prev => ({ ...prev, image: e.target.value }))}
+                      className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-orange-400/50"
+                      placeholder="https://example.com/image.jpg"
+                      required
+                    />
+                  </div>
+
+                  {/* Price */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">Price ($)</label>
+                    <input
+                      type="number"
+                      value={caseForm.price ?? ""}
+                      onChange={(e) => setCaseForm(prev => ({ ...prev, price: e.target.value ? parseFloat(e.target.value) : null }))}
+                      className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-orange-400/50"
+                      placeholder="0.00"
+                    />
+                  </div>
+
+                  {/* Description */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">Description</label>
+                    <textarea
+                      value={caseForm.description}
+                      onChange={(e) => setCaseForm(prev => ({ ...prev, description: e.target.value }))}
+                      className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-green-400/50 h-24 resize-none"
+                      placeholder="Description"
+                    />
+                  </div>
+
+                  {/* Rental */}
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="checkbox"
+                      id="rental"
+                      checked={caseForm.rental}
+                      onChange={(e) => setCaseForm(prev => ({ ...prev, rental: e.target.checked }))}
+                      className="w-4 h-4 text-orange-600 bg-white/10 border-white/20 rounded focus:ring-orange-500"
+                    />
+                    <label htmlFor="rental" className="text-white">Rental</label>
+                  </div>
+
+                  {/* Status */}
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="checkbox"
+                      id="isActive"
+                      checked={caseForm.status === "active"}
+                      onChange={(e) => setCaseForm(prev => ({ ...prev, status: e.target.checked ? "active" : "inactive" }))}
+                      className="w-4 h-4 text-orange-600 bg-white/10 border-white/20 rounded focus:ring-orange-500"
+                    />
+                    <label htmlFor="isActive" className="text-white">Active Case</label>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">Image URL *</label>
-                  <input
-                    type="url"
-                    value={caseForm.image}
-                    onChange={(e) => setCaseForm(prev => ({ ...prev, image: e.target.value }))}
-                    className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-orange-400/50"
-                    placeholder="https://example.com/image.jpg"
-                    required
-                  />
+                {/* Action Buttons */}
+                <div className="flex space-x-4 mt-8">
+                  <button
+                    onClick={handleSaveCase}
+                    className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-green-500 to-green-600 text-white font-bold hover:from-green-600 hover:to-green-700 transition-all duration-300 flex items-center justify-center space-x-2"
+                  >
+                    <Save className="w-5 h-5" />
+                    <span>Save Case</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowAddCase(false);
+                      resetCaseForm();
+                    }}
+                    className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-gray-600 to-gray-700 text-white font-semibold hover:from-gray-700 hover:to-gray-800 transition-all duration-300"
+                  >
+                    Cancel
+                  </button>
                 </div>
-
-                <div className="flex items-center space-x-3">
-                  <input
-                    type="checkbox"
-                    id="isActive"
-                    checked={caseForm.isActive}
-                    onChange={(e) => setCaseForm(prev => ({ ...prev, isActive: e.target.checked }))}
-                    className="w-4 h-4 text-orange-600 bg-white/10 border-white/20 rounded focus:ring-orange-500"
-                  />
-                  <label htmlFor="isActive" className="text-white">Active Case</label>
-                </div>
-              </div>
-
-              <div className="flex space-x-4 mt-8">
-                <button
-                  onClick={handleSaveCase}
-                  className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-green-500 to-green-600 text-white font-bold hover:from-green-600 hover:to-green-700 transition-all duration-300 flex items-center justify-center space-x-2"
-                >
-                  <Save className="w-5 h-5" />
-                  <span>Save Case</span>
-                </button>
-                <button
-                  onClick={() => {
-                    setShowAddCase(false);
-                    resetCaseForm();
-                  }}
-                  className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-gray-600 to-gray-700 text-white font-semibold hover:from-gray-700 hover:to-gray-800 transition-all duration-300"
-                >
-                  Cancel
-                </button>
               </div>
             </div>
           </div>
@@ -1486,31 +1538,39 @@ export default function AdminPanel({ onBack, cases, onUpdateCases }: AdminPanelP
 
       {/* Weapon Manager Modal */}
       {showWeaponManager && selectedCase && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm">
-          <div className="w-full max-w-7xl mx-4 h-[90vh] rounded-3xl bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl border border-white/20 shadow-2xl overflow-hidden">
-            <div className="p-6 border-b border-white/20">
-              <div className="flex items-center justify-between">
-                <h3 className="text-2xl font-bold text-white flex items-center space-x-2">
-                  <Target className="w-6 h-6 text-orange-400" />
-                  <span>Manage Items: {selectedCase.name}</span>
-                </h3>
-                <button
-                  onClick={() => {
-                    setShowWeaponManager(false);
-                    setSelectedCase(null);
-                  }}
-                  className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors duration-300"
-                >
-                  <X className="w-6 h-6 text-white" />
-                </button>
-              </div>
-            </div>
+        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm overflow-y-auto mt-3">
+          <div className="flex min-h-screen items-center justify-center px-4 py-16">
+            <div className="w-full max-w-7xl mx-4 rounded-3xl bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl border border-white/20 shadow-2xl overflow-hidden">
+              <div className="space-y-4">
+                {/* Case Name */}
+                <div className="p-6 border-b border-white/20 shrink-0">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-2xl font-bold text-white flex items-center space-x-2">
+                      <Target className="w-6 h-6 text-orange-400" />
+                      <span>Manage Items : {selectedCase.name}</span>
+                    </h3>
+                    <button
+                      onClick={() => {
+                        setShowWeaponManager(false);
+                        setSelectedCase(null);
+                      }}
+                      className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors duration-300"
+                    >
+                      <X className="w-6 h-6 text-white" />
+                    </button>
+                  </div>
+                </div>
 
-            <div className="p-6 h-full overflow-hidden">
-              <WeaponManager
-                onSelectWeapons={handleSelectWeaponsForCase}
-                selectedWeapons={selectedCase.items}
-              />
+                {/* Scrollable Content */}
+                <div className="p-6 flex-1">
+                  <WeaponManager
+                    onSelectWeapons={handleSelectWeaponsForCase}
+                    selectedWeapons={selectedCase?.items}
+                    selectedCase={selectedCase}
+                    setSelectedCase={setSelectedCase}
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>

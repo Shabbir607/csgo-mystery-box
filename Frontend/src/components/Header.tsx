@@ -20,11 +20,11 @@ export default function Header({ balance, onViewChange, currentView, onAddFunds,
   // Handle click outside to close menu
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (showUserMenu && 
-          menuRef.current && 
-          buttonRef.current &&
-          !menuRef.current.contains(event.target as Node) &&
-          !buttonRef.current.contains(event.target as Node)) {
+      if (showUserMenu &&
+        menuRef.current &&
+        buttonRef.current &&
+        !menuRef.current.contains(event.target as Node) &&
+        !buttonRef.current.contains(event.target as Node)) {
         setShowUserMenu(false);
       }
     };
@@ -52,14 +52,14 @@ export default function Header({ balance, onViewChange, currentView, onAddFunds,
       <div className="max-w-7xl mx-auto px-6">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <div 
+          <div
             className="flex items-center space-x-3 cursor-pointer hover:scale-105 transition-all duration-500 group"
             onClick={() => onViewChange('cases')}
           >
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center shadow-xl shadow-orange-500/30 overflow-hidden p-2 group-hover:shadow-orange-500/50 transition-all duration-500">
-              <img 
-                src="/download.webp" 
-                alt="CleanCase Logo" 
+              <img
+                src="/download.webp"
+                alt="CleanCase Logo"
                 className="w-full h-full object-contain filter brightness-0 invert"
               />
             </div>
@@ -77,11 +77,10 @@ export default function Header({ balance, onViewChange, currentView, onAddFunds,
               <button
                 key={item.key}
                 onClick={() => onViewChange(item.key as any)}
-                className={`px-5 py-2.5 rounded-xl font-medium transition-all duration-500 relative overflow-hidden ${
-                  currentView === item.key
-                    ? 'glass-button text-white shadow-lg shadow-orange-500/30' 
+                className={`px-5 py-2.5 rounded-xl font-medium transition-all duration-500 relative overflow-hidden ${currentView === item.key
+                    ? 'glass-button text-white shadow-lg shadow-orange-500/30'
                     : 'glass-morphism text-white/80 hover:text-white hover:glass-morphism-strong'
-                }`}
+                  }`}
               >
                 <span className="relative z-10">{item.name}</span>
                 {currentView === item.key && (
@@ -100,7 +99,7 @@ export default function Header({ balance, onViewChange, currentView, onAddFunds,
                   <Wallet className="w-4 h-4 text-orange-400" />
                   <div className="flex flex-col">
                     <span className="text-xs text-orange-400 font-medium uppercase tracking-wide">Balance</span>
-                    <span className="text-white font-bold">${balance.toFixed(2)}</span>
+                    <span className="text-white font-bold">${Number(balance || 0).toFixed(2)}</span>
                   </div>
                 </div>
 
@@ -116,11 +115,10 @@ export default function Header({ balance, onViewChange, currentView, onAddFunds,
                 {/* Steam Button */}
                 <button
                   onClick={() => onViewChange('steam')}
-                  className={`p-2.5 rounded-xl transition-all duration-500 ${
-                    currentView === 'steam'
+                  className={`p-2.5 rounded-xl transition-all duration-500 ${currentView === 'steam'
                       ? 'glass-button text-white shadow-lg shadow-blue-500/30'
                       : 'glass-morphism hover:glass-morphism-strong text-blue-400 hover:text-blue-300'
-                  }`}
+                    }`}
                   title="Steam Integration"
                 >
                   <Steam className="w-5 h-5" />
@@ -135,10 +133,10 @@ export default function Header({ balance, onViewChange, currentView, onAddFunds,
                     <Shield className="w-5 h-5" />
                   </button>
                 )}
-                
+
                 {/* User Menu */}
                 <div className="relative">
-                  <button 
+                  <button
                     ref={buttonRef}
                     onClick={handleMenuToggle}
                     className="flex items-center space-x-2 p-2.5 rounded-xl glass-morphism hover:glass-morphism-strong transition-all duration-500 group"
@@ -149,7 +147,7 @@ export default function Header({ balance, onViewChange, currentView, onAddFunds,
 
                   {/* Dropdown Menu */}
                   {showUserMenu && (
-                    <div 
+                    <div
                       ref={menuRef}
                       className="absolute right-0 top-full mt-2 w-56 rounded-2xl glass-morphism-strong border border-white/30 shadow-2xl overflow-hidden animate-scale-in z-[9999]"
                     >
@@ -165,31 +163,33 @@ export default function Header({ balance, onViewChange, currentView, onAddFunds,
                           </div>
                         </div>
                       </div>
-                      
+
                       {/* Menu Items */}
                       <div className="p-2">
                         <button
                           onClick={() => handleMenuItemClick(() => onViewChange('profile'))}
-                          className="w-full text-left px-3 py-2.5 rounded-lg text-white hover:glass-morphism transition-all duration-300 flex items-center space-x-3"
+                          className="w-full text-left px-3 py-2.5 rounded-lg text-white transition-all duration-300 flex items-center space-x-3 hover:bg-white/10"
                         >
                           <User className="w-4 h-4" />
                           <span>Profile</span>
                         </button>
                         <button
                           onClick={() => handleMenuItemClick(() => onViewChange('steam'))}
-                          className="w-full text-left px-3 py-2.5 rounded-lg text-white hover:glass-morphism transition-all duration-300 flex items-center space-x-3"
+                          className="w-full text-left px-3 py-2.5 rounded-lg text-white transition-all duration-300 flex items-center space-x-3 hover:bg-white/10"
                         >
                           <Steam className="w-4 h-4" />
                           <span>Steam Integration</span>
                         </button>
                         <button
                           onClick={() => handleMenuItemClick(() => onViewChange('settings'))}
-                          className="w-full text-left px-3 py-2.5 rounded-lg text-white hover:glass-morphism transition-all duration-300 flex items-center space-x-3"
+                          className="w-full text-left px-3 py-2.5 rounded-lg text-white transition-all duration-300 flex items-center space-x-3 hover:bg-white/10"
                         >
                           <Settings className="w-4 h-4" />
                           <span>Settings</span>
                         </button>
+
                         <div className="border-t border-white/20 my-2" />
+
                         <button
                           onClick={() => handleMenuItemClick(onLogout)}
                           className="w-full text-left px-3 py-2.5 rounded-lg text-red-400 hover:bg-red-500/10 transition-all duration-300 flex items-center space-x-3"
@@ -198,6 +198,7 @@ export default function Header({ balance, onViewChange, currentView, onAddFunds,
                           <span>Logout</span>
                         </button>
                       </div>
+
                     </div>
                   )}
                 </div>
@@ -213,7 +214,7 @@ export default function Header({ balance, onViewChange, currentView, onAddFunds,
             )}
           </div>
         </div>
-        
+
         {/* Glow Effect */}
         <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-96 h-px bg-gradient-to-r from-transparent via-orange-500/50 to-transparent" />
       </div>

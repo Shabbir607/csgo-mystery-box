@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import Header from './components/Header';
 import CaseSelector from './components/CaseSelector';
 import CaseOpener from './components/CaseOpener';
@@ -9,10 +9,11 @@ import CryptoWallet from './components/CryptoWallet';
 import SteamIntegration from './components/SteamIntegration';
 import AdminPanel from './components/Admin/AdminPanel';
 import LoginModal from './components/Auth/LoginModal';
-import { CSGOCase, CSGOItem, User } from './types';
+import { CryptoCurrency, CSGOCase, CSGOItem, User } from './types';
 import { cases as initialCases } from './data/cases';
 import { Sparkles } from 'lucide-react';
 import axios from 'axios';
+import { useToast } from './components/ToastContext';
 type View = 'cases' | 'opening' | 'inventory' | 'profile' | 'settings' | 'crypto' | 'admin' | 'steam';
 
 // Local storage keys
@@ -29,11 +30,25 @@ const STORAGE_KEYS = {
 function App() {
   const [user, setUser] = useState<User | null>(null);
   const [cases, setCases] = useState<CSGOCase[]>(initialCases);
+  const [AllCases, setAllCases] = useState<CSGOCase[]>([]);
+  const [HomeCases, setHomeCases] = useState<CSGOCase[]>([]);
+  const [caseResponse, setCaseResponse] = useState(null);
+  const [nextPageHome, setNextPageHome] = useState<string | null>(null);
   const [selectedCase, setSelectedCase] = useState<CSGOCase | null>(null);
   const [currentView, setCurrentView] = useState<View>('cases');
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [nextPageCases, setNextPageCases] = useState<string | null>(null);
+  const CaseContainerRef = useRef<HTMLDivElement | null>(null);
+  const HomeContainerRef = useRef<HTMLDivElement | null>(null);
+  const [isFetchingHome, setIsFetchingHome] = useState(false);
+  const [supportedCryptos, setSupportedCryptos] = useState<CryptoCurrency[]>([]);
+  const [selectedCrypto, setSelectedCrypto] = useState<CryptoCurrency | undefined>(undefined);
   console.log("User", user)
+  console.log("AllCases", AllCases)
+  console.log("HomeCases", HomeCases)
+
+  const { showToast } = useToast();
 
   // Memoized loading component
   const LoadingScreen = useMemo(() => (
@@ -184,6 +199,170 @@ function App() {
     }
   }, []);
 
+  const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
+
+  const fetchAuthenticatedUser = useCallback(async (): Promise<User | null> => {
+    const token = sessionStorage.getItem('auth_token');
+
+    if (!token) {
+      showToast("Session Expired. Please login again.", "error");
+      handleLogout();
+      setShowLoginModal(true);
+      return null;
+    }
+
+    try {
+      const response = await axios.get(
+        'https://production.gameonha.com/api/user',
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+        }
+      );
+
+      if (response.status === 200 && response.data) {
+        const userData = response.data;
+        const persistentData = getPersistentUserData(userData.name);
+
+        const user: User = {
+          username: userData.name || 'Unknown',
+          isAdmin: userData.isAdmin === true,
+          ...persistentData
+        };
+
+        setUser(user);
+        return user;
+      } else {
+        console.warn("Unexpected Response Format:", response);
+        return null;
+      }
+    } catch (error: any) {
+      console.error("Error Fetching Authenticated User:", error?.response?.data || error.message);
+    }
+  }, [getPersistentUserData, showToast, hasCheckedAuth]);
+
+  useEffect(() => {
+    const token = sessionStorage.getItem('auth_token');
+
+    if (!token && !hasCheckedAuth) {
+      fetchAuthenticatedUser();
+      setHasCheckedAuth(true);
+    }
+
+    if (token && !hasCheckedAuth) {
+      setHasCheckedAuth(true);
+    }
+  }, [hasCheckedAuth, fetchAuthenticatedUser]);
+
+  useEffect(() => {
+    fetchCases();
+  }, []);
+
+  const fetchCases = async (url = 'https://production.gameonha.com/api/admin/crates?page=1', append = false) => {
+    try {
+      const token = sessionStorage.getItem('auth_token');
+
+      const res = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      // if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+
+      const data = await res.json();
+      console.log(data);
+
+      const cratesData = data?.crates?.data || [];
+
+      setCaseResponse(data?.crates || null);
+      setAllCases(prev => (append ? [...prev, ...cratesData] : cratesData));
+      setNextPageCases(data?.crates?.next_page_url || null);
+    } catch (err: any) {
+      showToast(err.message || 'Failed to Fetch Cases', "error");
+    }
+  };
+
+  useEffect(() => {
+    FetchHomeCases();
+  }, []);
+
+  const FetchHomeCases = async (url = 'https://production.gameonha.com/api/cases?page=1', append = false) => {
+    try {
+      const token = sessionStorage.getItem('auth_token');
+
+      const res = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+
+      const data = await res.json();
+      console.log(data);
+
+      const cratesData = data?.crates?.data || [];
+
+      setHomeCases(prev => (append ? [...prev, ...cratesData] : cratesData));
+      setNextPageHome(data?.crates?.next_page_url || null);
+    } catch (err: any) {
+      showToast(err.message || 'Failed to Fetch HomeCases', "error");
+    }
+  };
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const container = HomeContainerRef.current;
+      if (!container || isFetchingHome || !nextPageHome) return;
+
+      const { scrollTop, scrollHeight, clientHeight } = container;
+
+      if (scrollTop + clientHeight >= scrollHeight - 100) {
+        setIsFetchingHome(true);
+        FetchHomeCases(nextPageHome, true).finally(() => setIsFetchingHome(false));
+      }
+    };
+
+    const container = HomeContainerRef.current;
+    container?.addEventListener('scroll', handleScroll);
+    return () => container?.removeEventListener('scroll', handleScroll);
+  }, [nextPageHome, isFetchingHome]);
+
+  useEffect(() => {
+    FetchCurrencies();
+  }, []);
+
+  const FetchCurrencies = async () => {
+    try {
+      const token = sessionStorage.getItem('auth_token');
+
+      const response = await fetch('https://production.gameonha.com/api/currencies', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('FetchCurrencies API Response:', data);
+      setSupportedCryptos(data?.data);
+      setSelectedCrypto(data?.data?.[0]);
+
+    } catch (err: any) {
+      showToast(err.message || 'Failed to fetch FetchCurrencies.', "error");
+      console.error('FetchCurrencies error:', err);
+    }
+  };
+
   // Save user data to localStorage whenever it changes
   useEffect(() => {
     if (user) {
@@ -258,13 +437,14 @@ function App() {
           }
         );
       }
-
+      console.log("UserHaii", response);
       const token = response.data?.token;
       if (!token) {
         console.error("No Token Found in login Response", response.data);
-        alert(response?.data?.message || "Login failed: Token not Received.");
+        showToast(response?.data?.message || "Login failed: Token not Received.", "error");
         return;
       }
+      sessionStorage.setItem('auth_token', token);
 
       const persistentData = getPersistentUserData(email);
       const mockUser: User = {
@@ -273,7 +453,7 @@ function App() {
         ...persistentData
       };
 
-      sessionStorage.setItem('auth_token', token);
+      sessionStorage.setItem('User_id', response.data?.user?.id);
       setUser(mockUser);
       setShowLoginModal(false);
 
@@ -281,7 +461,7 @@ function App() {
       const message =
         error?.response?.data?.message;
       if (message) {
-        alert(message);
+        showToast(message, "error");
       }
     }
   }, [getPersistentUserData]);
@@ -313,6 +493,8 @@ function App() {
         );
         const responseData = response.data?.user || response.data;
         console.log("Processed Response Data:", responseData);
+        showToast("User Registered Successfully", "info")
+        setShowLoginModal(true);
 
       } catch (error: any) {
         const message =
@@ -321,7 +503,7 @@ function App() {
           error.message ||
           "Registration failed. Please Try Again.";
         console.error("Registration error:", message);
-        alert(message);
+        showToast("Registration failed !", message, "error");
       }
     },
     [getPersistentUserData]
@@ -356,6 +538,7 @@ function App() {
 
     // Always clear session data regardless
     sessionStorage.removeItem('auth_token');
+    sessionStorage.removeItem('User_id');
     localStorage.removeItem(STORAGE_KEYS.USER);
     localStorage.removeItem(STORAGE_KEYS.SELECTED_CASE);
     saveToStorage(STORAGE_KEYS.CURRENT_VIEW, 'cases');
@@ -364,54 +547,6 @@ function App() {
     setSelectedCase(null);
     setCurrentView('cases');
   }, [saveToStorage]);
-
-  const fetchAuthenticatedUser = useCallback(async (): Promise<User | null> => {
-    const token = sessionStorage.getItem('auth_token');
-
-    if (!token) {
-      console.warn("No Token Found in SessionStorage.");
-      return null;
-    }
-
-    try {
-      const response = await axios.get(
-        'https://production.gameonha.com/api/user',
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/json',
-          },
-        }
-      );
-
-      if (response.status === 200 && response.data) {
-        const userData = response.data;
-
-        const persistentData = getPersistentUserData(userData.name);
-
-        const user: User = {
-          username: userData.name || 'Unknown',
-          isAdmin: userData.isAdmin === true,
-          ...persistentData
-        };
-
-        setUser(user);
-        return user;
-      } else {
-        console.warn("Unexpected Response Format:", response);
-        return null;
-      }
-    } catch (error: any) {
-      console.error("Error Fetching Authenticated User:", error?.response?.data || error.message);
-      return null;
-    }
-  }, [getPersistentUserData]);
-
-  useEffect(() => {
-    if (!user) {
-      fetchAuthenticatedUser();
-    }
-  }, [user, fetchAuthenticatedUser]);
 
   const handleSelectCase = useCallback((caseItem: CSGOCase) => {
     if (!user) {
@@ -550,7 +685,6 @@ function App() {
         onShowLogin={() => setShowLoginModal(true)}
         onLogout={handleLogout}
       />
-
       <main className="relative z-10 pt-32 px-6 pb-12">
         <div className="max-w-7xl mx-auto">
           {/* Hero Section - Only show on cases view */}
@@ -596,7 +730,7 @@ function App() {
               <div className="flex space-x-2 p-2 rounded-3xl bg-gradient-to-r from-white/10 to-white/5 backdrop-blur-xl border border-white/20 shadow-2xl">
                 <button
                   onClick={() => handleViewChange('cases')}
-                  className={`px-8 py-4 rounded-2xl font-bold transition-all duration-300 flex items-center space-x-2 ${currentView === 'cases'
+                  className={`w-55 px-8 py-4 rounded-2xl font-bold transition-all duration-300 flex items-center space-x-2 ${currentView === 'cases'
                     ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-2xl shadow-orange-500/30 transform scale-105'
                     : 'text-white/70 hover:text-white hover:bg-white/10'
                     }`}
@@ -613,7 +747,7 @@ function App() {
                 </button>
                 <button
                   onClick={() => handleViewChange('inventory')}
-                  className={`px-8 py-4 rounded-2xl font-bold transition-all duration-300 flex items-center space-x-2 ${currentView === 'inventory'
+                  className={`w-55 px-8 py-4 rounded-2xl font-bold transition-all duration-300 flex items-center space-x-2 ${currentView === 'inventory'
                     ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-2xl shadow-orange-500/30 transform scale-105'
                     : 'text-white/70 hover:text-white hover:bg-white/10'
                     }`}
@@ -629,9 +763,11 @@ function App() {
           <div className="flex justify-center">
             {currentView === 'cases' && (
               <CaseSelector
-                cases={cases}
+                cases={HomeCases}
                 selectedCase={selectedCase}
                 onSelectCase={handleSelectCase}
+                HomeContainerRef={HomeContainerRef}
+                isFetchingHome={isFetchingHome}
               />
             )}
 
@@ -641,6 +777,10 @@ function App() {
                 balance={user.balance}
                 onOpenCase={handleOpenCase}
                 onBack={handleBackToCases}
+                onSelectCase={handleSelectCase}
+                HomeContainerRef={HomeContainerRef}
+                isFetchingHome={isFetchingHome}
+                cases={HomeCases}
               />
             )}
 
@@ -661,6 +801,7 @@ function App() {
             {currentView === 'settings' && (
               <Settings
                 onBack={() => handleViewChange('cases')}
+                handleLogout={handleLogout}
               />
             )}
 
@@ -668,7 +809,12 @@ function App() {
               <CryptoWallet
                 onBack={() => handleViewChange('cases')}
                 userBalance={user.balance}
+                FetchCurrencies={FetchCurrencies}
                 onBalanceUpdate={handleBalanceUpdate}
+                selectedCrypto={selectedCrypto}
+                setSelectedCrypto={setSelectedCrypto}
+                supportedCryptos={supportedCryptos}
+                setSupportedCryptos={setSupportedCryptos}
               />
             )}
 
@@ -684,7 +830,12 @@ function App() {
               <AdminPanel
                 onBack={() => handleViewChange('cases')}
                 cases={cases}
+                AllCases={AllCases}
+                fetchCases={fetchCases}
+                caseResponse={caseResponse}
                 onUpdateCases={handleUpdateCases}
+                refCase={CaseContainerRef}
+                nextPageCases={nextPageCases}
               />
             )}
           </div>

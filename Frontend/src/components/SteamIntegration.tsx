@@ -53,7 +53,7 @@ export default function SteamIntegration({ onBack, user, onUpdateUser }: SteamIn
   //     // In production, this would redirect to Steam OAuth
   //     // For demo purposes, we'll simulate the linking process
   //     await new Promise(resolve => setTimeout(resolve, 2000));
-      
+
   //     const mockSteamAccount: SteamAccount = {
   //       steamId: '76561198000000000',
   //       steamUsername: 'CleanCase_User',
@@ -73,45 +73,53 @@ export default function SteamIntegration({ onBack, user, onUpdateUser }: SteamIn
   //     setIsLinking(false);
   //   }
   // };
-const handleSteamLogin = () => {
-  setIsLinking(true);
 
-  const width = 600;
-  const height = 700;
-  const left = (window.innerWidth - width) / 2;
-  const top = (window.innerHeight - height) / 2;
+  const BASE_URL = 'https://production.gameonha.com'; 
 
-  const steamWindow = window.open(
-    'http://localhost:8000/api/steam/redirect',
-    'SteamLogin',
-    `width=${width},height=${height},top=${top},left=${left}`
-  );
 
-  const handleMessage = (event: MessageEvent) => {
-    // Validate source origin (important for security!)
-    if (event.origin !== 'http://localhost:8000') {
-      return;
-    }
+  const handleSteamLogin = () => {
+    setIsLinking(true);
 
-    const { token, steamAccount } = event.data;
+    const width = 600;
+    const height = 700;
+    const left = (window.innerWidth - width) / 2;
+    const top = (window.innerHeight - height) / 2;
 
-    if (token && steamAccount) {
-      // Store token (you can use sessionStorage or localStorage)
-      sessionStorage.setItem('auth_token', token);
+    const steamLoginUrl = `${BASE_URL}/api/steam/redirect`;
 
-      // Update user with linked Steam account
-      const updatedUser = { ...user, steamAccount };
-      onUpdateUser(updatedUser);
-    }
+    const steamWindow = window.open(
+      steamLoginUrl,
+      'SteamLogin',
+      `width=${width},height=${height},top=${top},left=${left}`
+    );
 
-    setIsLinking(false);
-    window.removeEventListener('message', handleMessage);
-    steamWindow?.close();
+    const handleMessage = (event: MessageEvent) => {
+      // ✅ Log the full response for debugging
+      console.log('Steam popup message:', event);
+
+      // ✅ Security check
+      if (!event.origin.includes(BASE_URL.replace('https://', '').replace('http://', ''))) {
+        console.warn('Invalid origin:', event.origin);
+        return;
+      }
+
+      const { token, steamAccount } = event.data;
+
+      if (token && steamAccount) {
+        sessionStorage.setItem('auth_token', token);
+
+        const updatedUser = { ...user, steamAccount };
+        onUpdateUser(updatedUser);
+      }
+
+      setIsLinking(false);
+      window.removeEventListener('message', handleMessage);
+      steamWindow?.close();
+    };
+
+    // ✅ Listen for popup message
+    window.addEventListener('message', handleMessage);
   };
-
-  // Listen for messages from the popup
-  window.addEventListener('message', handleMessage);
-};
 
   const handleUnlinkSteam = () => {
     const updatedUser = { ...user, steamAccount: undefined };
@@ -178,16 +186,16 @@ const handleSteamLogin = () => {
         };
 
         setWithdrawals(prev => [newWithdrawal, ...prev]);
-        
+
         // Remove items from user inventory
         const updatedUser = {
           ...user,
-          inventory: user.inventory.filter(item => 
+          inventory: user.inventory.filter(item =>
             !selectedItems.some(selected => selected.id === item.id)
           )
         };
         onUpdateUser(updatedUser);
-        
+
         setSelectedItems([]);
         setShowWithdrawModal(false);
         setActiveTab('history');
@@ -234,7 +242,7 @@ const handleSteamLogin = () => {
           <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform duration-300" />
           <span className="font-semibold">Back to CleanCase</span>
         </button>
-        
+
         <div className="text-center">
           <div className="flex items-center justify-center space-x-3 mb-2">
             <div className="w-8 h-8 rounded-2xl bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 flex items-center justify-center shadow-2xl shadow-blue-500/30">
@@ -246,7 +254,7 @@ const handleSteamLogin = () => {
           </div>
           <p className="text-sm text-blue-400 font-medium tracking-wide">Withdraw Items to Steam</p>
         </div>
-        
+
         <div className="w-32" />
       </div>
 
@@ -261,11 +269,10 @@ const handleSteamLogin = () => {
             <button
               key={key}
               onClick={() => setActiveTab(key as any)}
-              className={`px-8 py-4 rounded-2xl font-bold transition-all duration-300 flex items-center space-x-2 ${
-                activeTab === key
-                  ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-2xl shadow-blue-500/30 transform scale-105'
-                  : 'text-white/70 hover:text-white hover:bg-white/10'
-              }`}
+              className={`px-8 py-4 rounded-2xl font-bold transition-all duration-300 flex items-center space-x-2 ${activeTab === key
+                ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-2xl shadow-blue-500/30 transform scale-105'
+                : 'text-white/70 hover:text-white hover:bg-white/10'
+                }`}
             >
               <Icon className="w-5 h-5" />
               <span>{name}</span>
@@ -282,7 +289,7 @@ const handleSteamLogin = () => {
               <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center mx-auto mb-6 shadow-2xl">
                 <Steam className="w-12 h-12 text-white" />
               </div>
-              
+
               <h3 className="text-2xl font-bold text-white mb-4">Link Your Steam Account</h3>
               <p className="text-gray-400 mb-8 max-w-md mx-auto">
                 Connect your Steam account to withdraw items directly to your Steam inventory
@@ -308,11 +315,10 @@ const handleSteamLogin = () => {
               <button
                 onClick={handleSteamLogin}
                 disabled={isLinking}
-                className={`px-8 py-4 rounded-2xl font-bold transition-all duration-300 flex items-center space-x-3 mx-auto ${
-                  isLinking
-                    ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 shadow-xl hover:shadow-2xl transform hover:scale-105'
-                }`}
+                className={`px-8 py-4 rounded-2xl font-bold transition-all duration-300 flex items-center space-x-3 mx-auto ${isLinking
+                  ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 shadow-xl hover:shadow-2xl transform hover:scale-105'
+                  }`}
               >
                 {isLinking ? (
                   <RefreshCw className="w-5 h-5 animate-spin" />
@@ -369,12 +375,12 @@ const handleSteamLogin = () => {
                     <CheckCircle className="w-5 h-5 text-green-400" />
                   )}
                 </h4>
-                
+
                 <p className="text-gray-400 text-sm mb-4">
-                  Your trade URL is required to send items to your Steam inventory. 
-                  <a 
-                    href="https://steamcommunity.com/my/tradeoffers/privacy#trade_offer_access_url" 
-                    target="_blank" 
+                  Your trade URL is required to send items to your Steam inventory.
+                  <a
+                    href="https://steamcommunity.com/my/tradeoffers/privacy#trade_offer_access_url"
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="text-blue-400 hover:text-blue-300 ml-1"
                   >
@@ -388,9 +394,8 @@ const handleSteamLogin = () => {
                     value={tradeUrl || user.steamAccount.tradeUrl || ''}
                     onChange={(e) => setTradeUrl(e.target.value)}
                     placeholder="https://steamcommunity.com/tradeoffer/new/?partner=..."
-                    className={`flex-1 bg-white/10 border rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none ${
-                      tradeUrlError ? 'border-red-400/50' : 'border-white/20 focus:border-blue-400/50'
-                    }`}
+                    className={`flex-1 bg-white/10 border rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none ${tradeUrlError ? 'border-red-400/50' : 'border-white/20 focus:border-blue-400/50'
+                      }`}
                   />
                   <button
                     onClick={handleTradeUrlSubmit}
@@ -399,11 +404,11 @@ const handleSteamLogin = () => {
                     Save
                   </button>
                 </div>
-                
+
                 {tradeUrlError && (
                   <p className="text-red-400 text-sm mt-2">{tradeUrlError}</p>
                 )}
-                
+
                 {user.steamAccount.isTradeUrlValid && (
                   <div className="mt-4 p-3 rounded-lg bg-green-500/20 border border-green-400/30">
                     <p className="text-green-400 text-sm flex items-center space-x-2">
@@ -495,11 +500,10 @@ const handleSteamLogin = () => {
                       <div
                         key={`${item.id}-${index}`}
                         onClick={() => handleItemSelection(item)}
-                        className={`relative p-4 rounded-2xl cursor-pointer transition-all duration-300 ${
-                          isSelected
-                            ? 'bg-gradient-to-br from-blue-500/30 to-blue-600/30 border-2 border-blue-400 transform scale-105'
-                            : 'bg-white/10 border border-white/20 hover:bg-white/20 hover:border-blue-400/50'
-                        }`}
+                        className={`relative p-4 rounded-2xl cursor-pointer transition-all duration-300 ${isSelected
+                          ? 'bg-gradient-to-br from-blue-500/30 to-blue-600/30 border-2 border-blue-400 transform scale-105'
+                          : 'bg-white/10 border border-white/20 hover:bg-white/20 hover:border-blue-400/50'
+                          }`}
                       >
                         <img
                           src={item.image}
@@ -508,7 +512,7 @@ const handleSteamLogin = () => {
                         />
                         <h4 className="text-white font-semibold text-sm mb-1 truncate">{item.name}</h4>
                         <p className="text-blue-400 font-bold text-sm">${item.price.toFixed(2)}</p>
-                        
+
                         {isSelected && (
                           <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center">
                             <CheckCircle className="w-4 h-4 text-white" />
@@ -607,7 +611,7 @@ const handleSteamLogin = () => {
           <div className="w-full max-w-md mx-4 rounded-3xl bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl border border-white/20 shadow-2xl overflow-hidden">
             <div className="p-8">
               <h3 className="text-2xl font-bold text-white mb-6 text-center">Confirm Withdrawal</h3>
-              
+
               <div className="space-y-4 mb-6">
                 <div className="p-4 rounded-2xl bg-white/10">
                   <div className="flex justify-between items-center mb-2">
@@ -622,7 +626,7 @@ const handleSteamLogin = () => {
 
                 <div className="p-4 rounded-2xl bg-blue-500/20 border border-blue-400/30">
                   <p className="text-blue-300 text-sm">
-                    Items will be sent to your Steam account via trade offer. 
+                    Items will be sent to your Steam account via trade offer.
                     You'll need to accept the trade offer in Steam to receive your items.
                   </p>
                 </div>
@@ -638,11 +642,10 @@ const handleSteamLogin = () => {
                 <button
                   onClick={handleWithdrawItems}
                   disabled={isProcessingWithdrawal}
-                  className={`flex-1 py-3 rounded-2xl font-semibold transition-all duration-300 ${
-                    isProcessingWithdrawal
-                      ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700'
-                  }`}
+                  className={`flex-1 py-3 rounded-2xl font-semibold transition-all duration-300 ${isProcessingWithdrawal
+                    ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700'
+                    }`}
                 >
                   {isProcessingWithdrawal ? 'Processing...' : 'Confirm Withdrawal'}
                 </button>
@@ -656,9 +659,9 @@ const handleSteamLogin = () => {
       <div className="text-center pt-8 mt-12 border-t border-white/10">
         <div className="flex items-center justify-center space-x-2 mb-2">
           <div className="w-4 h-4 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center overflow-hidden p-0.5">
-            <img 
-              src="/download.webp" 
-              alt="CleanCase Logo" 
+            <img
+              src="/download.webp"
+              alt="CleanCase Logo"
               className="w-full h-full object-contain filter brightness-0 invert"
             />
           </div>
