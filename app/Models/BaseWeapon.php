@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class BaseWeapon extends Model
 {
-        public $incrementing = false;
+    public $incrementing = false;
     protected $keyType = 'string';
 
     protected $fillable = [
@@ -18,9 +18,11 @@ class BaseWeapon extends Model
         'price',
         'probability',
     ];
-public function crates()
-{
-    return $this->belongsToMany(Crate::class, 'crate_weapon', 'base_weapon_id', 'crate_id');
+
+    public function crates()
+    {
+        return $this->belongsToMany(Crate::class, 'crate_weapon', 'base_weapon_id', 'crate_id');
+    }
 }
 
-}
+

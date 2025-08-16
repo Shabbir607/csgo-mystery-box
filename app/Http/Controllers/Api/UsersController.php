@@ -14,35 +14,32 @@ use Exception;
 
 class UsersController extends Controller
 {
-public function index(Request $request)
-{
-    try {
-        $query = User::with(['role', 'details']);
+    public function index(Request $request)
+    {
+        try {
+            $query = User::with(['role', 'details']);
 
-        // Search by name or email
-        if ($search = $request->query('search')) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
-            });
+            if ($search = $request->query('search')) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
+                });
+            }
+
+            if ($status = $request->query('status')) {
+                $query->where('status', $status);
+            }
+
+            $users = $query->paginate(10);
+
+            return response()->json(['users' => $users], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'message' => 'Failed to fetch users.',
+                'error'   => $e->getMessage(),
+            ], 500);
         }
-
-        // Filter by status (e.g., active or inactive)
-        if ($status = $request->query('status')) {
-            $query->where('status', $status);
-        }
-
-        $users = $query->paginate(10);
-
-        return response()->json(['users' => $users], 200);
-    } catch (Exception $e) {
-        return response()->json([
-            'message' => 'Failed to fetch users.',
-            'error' => $e->getMessage()
-        ], 500);
     }
-}
-
 
     public function show(string $id)
     {
@@ -50,7 +47,10 @@ public function index(Request $request)
             $user = User::with(['role', 'details'])->findOrFail($id);
             return response()->json(['user' => $user], 200);
         } catch (Exception $e) {
-            return response()->json(['message' => 'User not found.', 'error' => $e->getMessage()], 404);
+            return response()->json([
+                'message' => 'User not found.',
+                'error'   => $e->getMessage(),
+            ], 404);
         }
     }
 
@@ -64,7 +64,7 @@ public function index(Request $request)
                 'email'      => 'sometimes|email|max:255|unique:users,email,' . $user->id,
                 'password'   => ['sometimes', 'confirmed', Rules\Password::defaults()],
                 'role_id'    => 'sometimes|exists:roles,id',
-                'status' => 'sometimes|in:active,inactive,banned,verified,unverified',
+                'status'     => 'sometimes|in:active,inactive,banned,verified,unverified',
                 'is_verified'=> 'sometimes|boolean',
                 'country'    => 'sometimes|string|max:100',
                 'two_factor_enabled' => 'sometimes|boolean',
@@ -73,7 +73,6 @@ public function index(Request $request)
                 'ip_address' => 'sometimes|ip',
                 'avatar'     => 'sometimes|image|mimes:jpg,jpeg,png|max:2048',
 
-                // Detail fields
                 'level'            => 'sometimes|integer|min:0',
                 'balance'          => 'sometimes|numeric|min:0',
                 'total_spent'      => 'sometimes|numeric|min:0',
@@ -122,12 +121,12 @@ public function index(Request $request)
         } catch (ValidationException $e) {
             return response()->json([
                 'message' => 'Validation failed.',
-                'errors'  => $e->errors()
+                'errors'  => $e->errors(),
             ], 422);
         } catch (Exception $e) {
             return response()->json([
                 'message' => 'Failed to update user.',
-                'error'   => $e->getMessage()
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
@@ -144,7 +143,10 @@ public function index(Request $request)
             $user->delete();
             return response()->json(['message' => 'User deleted successfully.'], 200);
         } catch (Exception $e) {
-            return response()->json(['message' => 'User not found or could not be deleted.', 'error' => $e->getMessage()], 404);
+            return response()->json([
+                'message' => 'User not found or could not be deleted.',
+                'error'   => $e->getMessage(),
+            ], 404);
         }
     }
 
@@ -154,7 +156,10 @@ public function index(Request $request)
             $users = User::with(['role', 'details'])->where('role_id', 2)->paginate(10);
             return response()->json(['users' => $users], 200);
         } catch (Exception $e) {
-            return response()->json(['message' => 'Failed to fetch regular users.', 'error' => $e->getMessage()], 500);
+            return response()->json([
+                'message' => 'Failed to fetch regular users.',
+                'error'   => $e->getMessage(),
+            ], 500);
         }
     }
 
@@ -174,8 +179,8 @@ public function index(Request $request)
             $user->details->increment('balance', $request->amount);
 
             return response()->json([
-                'message'      => 'Funds added successfully.',
-                'new_balance'  => $user->details->balance,
+                'message'     => 'Funds added successfully.',
+                'new_balance' => $user->details->balance,
             ], 200);
         } catch (ValidationException $e) {
             return response()->json([
@@ -201,7 +206,28 @@ public function index(Request $request)
                 'user'    => $user->fresh()->load('role'),
             ], 200);
         } catch (Exception $e) {
-            return response()->json(['message' => 'Failed to promote user.', 'error' => $e->getMessage()], 500);
+            return response()->json([
+                'message' => 'Failed to promote user.',
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function unmakeAdmin(string $id)
+    {
+        try {
+            $user = User::findOrFail($id);
+            $user->update(['role_id' => 2]);
+
+            return response()->json([
+                'message' => 'User demoted from admin successfully.',
+                'user'    => $user->fresh()->load('role'),
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'message' => 'Failed to demote user.',
+                'error'   => $e->getMessage(),
+            ], 500);
         }
     }
 }

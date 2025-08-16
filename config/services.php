@@ -34,5 +34,9 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
+    'tatum' => [
+    'api_key' => env('TATUM_API_KEY'),
+    'base_url' => 'https://api.tatum.io/v3', 
+],
 
 ];

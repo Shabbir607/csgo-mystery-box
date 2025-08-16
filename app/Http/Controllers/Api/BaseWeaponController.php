@@ -29,6 +29,9 @@ class BaseWeaponController extends Controller
                 'name' => 'required|string|max:255',
                 'description' => 'nullable|string',
                 'image' => 'nullable|string|url',
+                'price' => 'required|numeric|min:0',
+                'rarity' => 'nullable|string',
+                'probability' => 'nullable|numeric|min:0|max:1',
             ]);
 
             // Extract last 2 words from name
@@ -78,6 +81,9 @@ class BaseWeaponController extends Controller
             'name' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string',
             'image' => 'nullable|string',
+            'price' => 'sometimes|required|numeric|min:0',
+            'rarity' => 'nullable|string',
+            'probability' => 'nullable|numeric|min:0|max:1',
         ]);
 
         $weapon->update($validated);
@@ -96,4 +102,5 @@ class BaseWeaponController extends Controller
         return response()->json(['message' => 'Base weapon deleted.']);
     }
 }
+
 

@@ -14,7 +14,9 @@ return new class extends Migration
         Schema::create('crate_opens', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->foreignId('crate_id')->constrained('crates')->onDelete('cascade');
+            $table->string('crate_id');
+            $table->foreign('crate_id')->references('id')->on('crates')->onDelete('cascade');
+
             $table->string('weapon_id')->nullable();
             $table->string('client_seed');
             $table->string('server_seed');

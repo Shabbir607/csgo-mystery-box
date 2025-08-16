@@ -9,26 +9,48 @@ use Illuminate\Support\Facades\Auth;
 
 class CrateOpenController extends Controller
 {
-    protected $service;
+    protected $crateOpenService;
 
-    public function __construct(CrateOpenService $service)
+    public function __construct(CrateOpenService $crateOpenService)
     {
-        $this->service = $service;
+        $this->crateOpenService = $crateOpenService;
     }
 
-    public function open(Request $request, $crateId)
+    public function openCrate(Request $request, $crateId)
     {
         $request->validate([
             'client_seed' => 'required|string|min:5',
         ]);
 
-        $user = Auth::guard('sanctum')->user();
+        $user = Auth::user();
 
-        $crateOpen = $this->service->openCrate($user, $crateId, $request->client_seed);
+        try {
+            $result = $this->crateOpenService->openCrate($user, $crateId, $request->client_seed);
 
-        return response()->json([
-            'message' => 'Crate opened successfully.',
-            'result' => $crateOpen
-        ]);
+            return response()->json([
+                'message' => 'Crate opened successfully!',
+                'result' => $result,
+                'new_balance' => $user->details->balance, // Assuming balance is updated within the service
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to open crate.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getCrateOpenHistory(Request $request)
+    {
+        $user = Auth::user();
+
+        $history = \App\Models\CrateOpen::with(['crate', 'resultWeapon'])
+                            ->where('user_id', $user->id)
+                            ->orderBy('created_at', 'desc')
+                            ->paginate(10);
+
+        return response()->json(['history' => $history], 200);
     }
 }
+
+
